@@ -20,6 +20,8 @@
 # Go workspace file
 go.work
 
+bin/
+
 *.syso
 *.apk
 *.idsig

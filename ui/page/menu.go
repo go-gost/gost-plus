@@ -72,7 +72,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					Axis: layout.Vertical,
 				}.Layout(gtx,
 					layout.Rigid(func(gtx C) D {
-						label := material.H6(th, "Services")
+						label := material.H6(th, "Tunnels")
 						label.Font.Weight = font.Bold
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, label.Layout)
 					}),
