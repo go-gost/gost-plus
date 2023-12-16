@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 
 	"github.com/go-gost/core/auth"
@@ -35,6 +36,9 @@ type fileTunnel struct {
 	favorite atomic.Bool
 
 	cclose chan struct{}
+
+	err error
+	mu  sync.RWMutex
 }
 
 func NewFileTunnel(opts ...Option) Tunnel {
@@ -55,7 +59,7 @@ func NewFileTunnel(opts ...Option) Tunnel {
 	}
 
 	if options.Name == "" {
-		options.Name = fmt.Sprintf("FILE-%s", endpoint)
+		options.Name = endpoint
 	}
 
 	s := &fileTunnel{
@@ -83,8 +87,8 @@ func (s *fileTunnel) Endpoint() string {
 	return s.opts.Endpoint
 }
 
-func (f *fileTunnel) Entrypoint() string {
-	return fmt.Sprintf("https://%s.%s", f.endpoint, endpointAddr)
+func (s *fileTunnel) Entrypoint() string {
+	return fmt.Sprintf("https://%s.%s", s.endpoint, EndpointAddr)
 }
 
 func (s *fileTunnel) Options() Options {
@@ -132,19 +136,23 @@ func (s *fileTunnel) init() error {
 
 	s.config = &config.Config{
 		Services: []*config.ServiceConfig{file, rtcp},
-		Chains:   []*config.ChainConfig{chainConfig(s.opts.ID, s.opts.Name)},
+		Chains:   []*config.ChainConfig{ChainConfig(s.opts.ID, s.opts.Name)},
 	}
 
 	return nil
 }
 
-func (s *fileTunnel) Run() error {
+func (s *fileTunnel) Run() (err error) {
 	if s.IsClosed() {
 		return ErrTunnelClosed
 	}
 
-	if err := s.init(); err != nil {
-		return err
+	defer func() {
+		s.setErr(err)
+	}()
+
+	if err = s.init(); err != nil {
+		return
 	}
 
 	log := logger.Default().WithFields(map[string]any{
@@ -157,8 +165,8 @@ func (s *fileTunnel) Run() error {
 		ln := tcp.NewListener(
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "tcp"})),
 		)
-		if err := ln.Init(nil); err != nil {
-			return err
+		if err = ln.Init(nil); err != nil {
+			return
 		}
 		log.Infof("listen on %s", ln.Addr())
 
@@ -170,17 +178,18 @@ func (s *fileTunnel) Run() error {
 			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "file"})),
 			handler.AutherOption(auther),
 		)
-		if err := h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
-			return err
+		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
+			return
 		}
 		s.file = xservice.NewService(s.opts.Name, ln, h, xservice.LoggerOption(log))
 	}
 
 	{
-		ch, err := chain_parser.ParseChain(s.config.Chains[0], log)
+		var ch chain.Chainer
+		ch, err = chain_parser.ParseChain(s.config.Chains[0], log)
 		if err != nil {
 			log.Error(err)
-			return err
+			return
 		}
 
 		cfg := s.config.Services[1]
@@ -189,15 +198,15 @@ func (s *fileTunnel) Run() error {
 			listener.ChainOption(ch),
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})),
 		)
-		if err := ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
-			return err
+		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
+			return
 		}
 
 		h := remote.NewHandler(
 			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "rtcp"})),
 		)
-		if err := h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
-			return err
+		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
+			return
 		}
 		if forwarder, ok := h.(handler.Forwarder); ok {
 			forwarder.Forward(hop.NewHop(
@@ -210,7 +219,9 @@ func (s *fileTunnel) Run() error {
 	}
 
 	go s.file.Serve()
-	go s.forward.Serve()
+	go func() {
+		s.setErr(s.forward.Serve())
+	}()
 
 	log.Infof("file service run at %s", s.file.Addr())
 	return nil
@@ -241,4 +252,16 @@ func (s *fileTunnel) IsClosed() bool {
 	default:
 		return false
 	}
+}
+
+func (s *fileTunnel) setErr(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.err = err
+}
+
+func (s *fileTunnel) Err() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.err
 }

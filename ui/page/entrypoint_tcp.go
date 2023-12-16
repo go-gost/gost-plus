@@ -12,28 +12,36 @@ import (
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
 	"github.com/go-gost/gost-plus/tunnel"
+	"github.com/go-gost/gost-plus/tunnel/entrypoint"
 	"github.com/go-gost/gost-plus/ui/icons"
+	"github.com/google/uuid"
 	"golang.org/x/exp/shiny/materialdesign/colornames"
 )
 
-type tcpAddPage struct {
+type tcpEntryPointAddPage struct {
 	router *Router
 
 	list   layout.List
 	wgDone widget.Clickable
 
-	name component.TextField
-	addr component.TextField
+	name     component.TextField
+	tunnelID component.TextField
+	addr     component.TextField
 }
 
-func NewTCPAddPage(r *Router) Page {
-	return &tcpAddPage{
+func NewTCPEntryPointAddPage(r *Router) Page {
+	return &tcpEntryPointAddPage{
 		router: r,
 		list: layout.List{
 			Axis:      layout.Vertical,
 			Alignment: layout.Middle,
 		},
 		name: component.TextField{
+			Editor: widget.Editor{
+				SingleLine: true,
+			},
+		},
+		tunnelID: component.TextField{
 			Editor: widget.Editor{
 				SingleLine: true,
 			},
@@ -46,8 +54,9 @@ func NewTCPAddPage(r *Router) Page {
 	}
 }
 
-func (p *tcpAddPage) Init(opts ...PageOption) {
+func (p *tcpEntryPointAddPage) Init(opts ...PageOption) {
 	p.name.SetText("")
+	p.tunnelID.SetText("")
 	p.addr.SetText("")
 
 	p.router.bar.SetActions(
@@ -59,9 +68,9 @@ func (p *tcpAddPage) Init(opts ...PageOption) {
 				},
 				Layout: func(gtx C, bg, fg color.NRGBA) D {
 					if p.wgDone.Clicked(gtx) {
-						defer p.router.SwitchTo(Route{Path: PageTunnel})
-						p.createTunnel()
-						tunnel.SaveConfig()
+						defer p.router.SwitchTo(Route{Path: PageEntryPoint})
+						p.createEntryPoint()
+						entrypoint.SaveConfig()
 					}
 					return component.SimpleIconButton(bg, fg, &p.wgDone, icons.IconDone).Layout(gtx)
 				},
@@ -72,7 +81,7 @@ func (p *tcpAddPage) Init(opts ...PageOption) {
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *tcpAddPage) Layout(gtx C, th *material.Theme) D {
+func (p *tcpEntryPointAddPage) Layout(gtx C, th *material.Theme) D {
 	return p.list.Layout(gtx, 1, func(gtx C, _ int) D {
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
@@ -86,21 +95,43 @@ func (p *tcpAddPage) Layout(gtx C, th *material.Theme) D {
 	})
 }
 
-func (p *tcpAddPage) layout(gtx C, th *material.Theme) D {
+func (p *tcpEntryPointAddPage) layout(gtx C, th *material.Theme) D {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
-		layout.Rigid(material.Body1(th, "Expose local TCP tunnel to public network.").Layout),
+		layout.Rigid(material.Body1(th, "Create an entrypoint to connect to the specified TCP tunnel").Layout),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
-			return material.Body1(th, "Tunnel name").Layout(gtx)
+			return material.Body1(th, "Entrypoint name").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx C) D {
 			return p.name.Layout(gtx, th, "Name")
 		}),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
-			return material.Body1(th, "Endpoint address").Layout(gtx)
+			return material.Body1(th, "Tunnel ID").Layout(gtx)
+		}),
+		layout.Rigid(func(gtx C) D {
+			if err := func() error {
+				tid := strings.TrimSpace(p.tunnelID.Text())
+				if tid == "" {
+					return nil
+				}
+				if _, err := uuid.Parse(tid); err != nil {
+					return fmt.Errorf("invalid tunnel ID, should be a valid UUID")
+				}
+				return nil
+			}(); err != nil {
+				p.tunnelID.SetError(err.Error())
+			} else {
+				p.tunnelID.ClearError()
+			}
+
+			return p.tunnelID.Layout(gtx, th, "ID")
+		}),
+		layout.Rigid(layout.Spacer{Height: 10}.Layout),
+		layout.Rigid(func(gtx C) D {
+			return material.Body1(th, "Entrypoint address").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx C) D {
 			if err := func() error {
@@ -123,13 +154,14 @@ func (p *tcpAddPage) layout(gtx C, th *material.Theme) D {
 	)
 }
 
-func (p *tcpAddPage) createTunnel() error {
-	tun := tunnel.NewTCPTunnel(
+func (p *tcpEntryPointAddPage) createEntryPoint() error {
+	tun := entrypoint.NewTCPEntryPoint(
 		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
+		tunnel.IDOption(strings.ToLower(strings.TrimSpace(p.tunnelID.Text()))),
 		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
 	)
 
-	tunnel.Add(tun)
+	entrypoint.Add(tun)
 
 	if err := tun.Run(); err != nil {
 		tun.Close()
@@ -139,7 +171,7 @@ func (p *tcpAddPage) createTunnel() error {
 	return nil
 }
 
-type tcpEditPage struct {
+type tcpEntryPointEditPage struct {
 	router *Router
 
 	id string
@@ -150,15 +182,13 @@ type tcpEditPage struct {
 	wgDelete   widget.Clickable
 	wgDone     widget.Clickable
 
-	name component.TextField
-	addr component.TextField
-
-	wgID         widget.Clickable
-	wgEntrypoint widget.Clickable
+	name     component.TextField
+	tunnelID component.TextField
+	addr     component.TextField
 }
 
-func NewTCPEditPage(r *Router) Page {
-	return &tcpEditPage{
+func NewTCPEntryPointEditPage(r *Router) Page {
+	return &tcpEntryPointEditPage{
 		router: r,
 		list: layout.List{
 			Axis:      layout.Vertical,
@@ -169,6 +199,12 @@ func NewTCPEditPage(r *Router) Page {
 				SingleLine: true,
 			},
 		},
+		tunnelID: component.TextField{
+			Editor: widget.Editor{
+				SingleLine: true,
+				ReadOnly:   true,
+			},
+		},
 		addr: component.TextField{
 			Editor: widget.Editor{
 				SingleLine: true,
@@ -177,17 +213,19 @@ func NewTCPEditPage(r *Router) Page {
 	}
 }
 
-func (p *tcpEditPage) Init(opts ...PageOption) {
+func (p *tcpEntryPointEditPage) Init(opts ...PageOption) {
 	var options PageOptions
 	for _, opt := range opts {
 		opt(&options)
 	}
 
 	p.id = options.ID
-	s := tunnel.Get(p.id)
+
+	s := entrypoint.Get(p.id)
 	if s != nil {
 		sopts := s.Options()
 		p.name.SetText(sopts.Name)
+		p.tunnelID.SetText(sopts.ID)
 		p.addr.SetText(sopts.Endpoint)
 	}
 
@@ -198,14 +236,14 @@ func (p *tcpEditPage) Init(opts ...PageOption) {
 				Tag:  &p.wgFavorite,
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
-				s := tunnel.Get(p.id)
+				s := entrypoint.Get(p.id)
 				if s == nil {
 					return D{}
 				}
 
 				if p.wgFavorite.Clicked(gtx) {
 					s.Favorite(!s.IsFavorite())
-					tunnel.SaveConfig()
+					entrypoint.SaveConfig()
 				}
 
 				btn := component.SimpleIconButton(bg, fg, &p.wgFavorite, icons.IconFavorite)
@@ -223,14 +261,14 @@ func (p *tcpEditPage) Init(opts ...PageOption) {
 				Tag:  &p.wgState,
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
-				s := tunnel.Get(p.id)
+				s := entrypoint.Get(p.id)
 				if p.wgState.Clicked(gtx) && s != nil {
 					if s.IsClosed() {
-						s = p.createTunnel()
+						s = p.createEntryPoint()
 					} else {
 						s.Close()
 					}
-					tunnel.SaveConfig()
+					entrypoint.SaveConfig()
 				}
 
 				if s != nil && !s.IsClosed() {
@@ -247,9 +285,9 @@ func (p *tcpEditPage) Init(opts ...PageOption) {
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				if p.wgDelete.Clicked(gtx) {
-					tunnel.Delete(p.id)
-					tunnel.SaveConfig()
-					p.router.SwitchTo(Route{Path: PageTunnel})
+					entrypoint.Delete(p.id)
+					entrypoint.SaveConfig()
+					p.router.SwitchTo(Route{Path: PageEntryPoint})
 				}
 				return component.SimpleIconButton(bg, fg, &p.wgDelete, icons.IconDelete).Layout(gtx)
 			},
@@ -261,12 +299,12 @@ func (p *tcpEditPage) Init(opts ...PageOption) {
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				if p.wgDone.Clicked(gtx) {
-					defer p.router.SwitchTo(Route{Path: PageTunnel})
+					defer p.router.SwitchTo(Route{Path: PageEntryPoint})
 
-					if s := tunnel.Get(p.id); s != nil {
+					if s := entrypoint.Get(p.id); s != nil {
 						s.Close()
-						p.createTunnel()
-						tunnel.SaveConfig()
+						p.createEntryPoint()
+						entrypoint.SaveConfig()
 					}
 				}
 				return component.SimpleIconButton(bg, fg, &p.wgDone, icons.IconDone).Layout(gtx)
@@ -278,24 +316,23 @@ func (p *tcpEditPage) Init(opts ...PageOption) {
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *tcpEditPage) createTunnel() tunnel.Tunnel {
-	tun := tunnel.NewTCPTunnel(
+func (p *tcpEntryPointEditPage) createEntryPoint() entrypoint.EntryPoint {
+	s := entrypoint.NewTCPEntryPoint(
 		tunnel.IDOption(p.id),
 		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
+		tunnel.IDOption(strings.ToLower(strings.TrimSpace(p.tunnelID.Text()))),
 		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
 	)
 
-	tunnel.Set(tun)
-
-	if err := tun.Run(); err != nil {
-		tun.Close()
+	if err := s.Run(); err != nil {
 		log.Println(err)
 	}
+	entrypoint.Set(s)
 
-	return tun
+	return s
 }
 
-func (p *tcpEditPage) Layout(gtx C, th *material.Theme) D {
+func (p *tcpEntryPointEditPage) Layout(gtx C, th *material.Theme) D {
 	return p.list.Layout(gtx, 1, func(gtx C, _ int) D {
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
@@ -309,23 +346,42 @@ func (p *tcpEditPage) Layout(gtx C, th *material.Theme) D {
 	})
 }
 
-func (p *tcpEditPage) layout(gtx C, th *material.Theme) D {
+func (p *tcpEntryPointEditPage) layout(gtx C, th *material.Theme) D {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return layoutHeader(gtx, th, tunnel.Get(p.id), &p.wgID, &p.wgEntrypoint)
-		}),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
-			return material.Body1(th, "Tunnel name").Layout(gtx)
+			return material.Body1(th, "Entrypoint name").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx C) D {
 			return p.name.Layout(gtx, th, "Name")
 		}),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
-			return material.Body1(th, "Endpoint address").Layout(gtx)
+			return material.Body1(th, "Tunnel ID").Layout(gtx)
+		}),
+		layout.Rigid(func(gtx C) D {
+			if err := func() error {
+				tid := strings.TrimSpace(p.tunnelID.Text())
+				if tid == "" {
+					return nil
+				}
+				if _, err := uuid.Parse(tid); err != nil {
+					return fmt.Errorf("invalid tunnel ID, should be a valid UUID")
+				}
+				return nil
+			}(); err != nil {
+				p.tunnelID.SetError(err.Error())
+			} else {
+				p.tunnelID.ClearError()
+			}
+
+			return p.tunnelID.Layout(gtx, th, "ID")
+		}),
+		layout.Rigid(layout.Spacer{Height: 10}.Layout),
+		layout.Rigid(func(gtx C) D {
+			return material.Body1(th, "Entrypoint address").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx C) D {
 			if err := func() error {
@@ -333,7 +389,7 @@ func (p *tcpEditPage) layout(gtx C, th *material.Theme) D {
 				if addr == "" {
 					return nil
 				}
-				if _, _, err := net.SplitHostPort(addr); err != nil {
+				if _, err := net.ResolveTCPAddr("tcp", addr); err != nil {
 					return fmt.Errorf("invalid address format, should be [IP]:PORT or [HOST]:PORT")
 				}
 				return nil

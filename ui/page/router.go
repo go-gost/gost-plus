@@ -32,7 +32,7 @@ func NewRouter() *Router {
 		pages: make(map[string]Page),
 	}
 
-	r.Register(PageHome, NewTunnelPage(r))
+	r.Register(PageTunnel, NewTunnelPage(r))
 	r.Register(PageMenu, NewMenuPage(r))
 	r.Register(PageNewFile, NewFileAddPage(r))
 	r.Register(PageEditFile, NewFileEditPage(r))
@@ -42,9 +42,14 @@ func NewRouter() *Router {
 	r.Register(PageEditTCP, NewTCPEditPage(r))
 	r.Register(PageNewUDP, NewUDPAddPage(r))
 	r.Register(PageEditUDP, NewUDPEditPage(r))
+
+	r.Register(PageEntryPoint, NewEntryPointPage(r))
+	r.Register(PageEditTCPEntryPoint, NewTCPEntryPointEditPage(r))
+	r.Register(PageNewTCPEntryPoint, NewTCPEntryPointAddPage(r))
+
 	r.Register(PageAbout, NewAboutPage(r))
 
-	r.SwitchTo(Route{Path: PageHome})
+	r.SwitchTo(Route{Path: PageTunnel})
 
 	return r
 }
@@ -71,10 +76,14 @@ func (r *Router) Layout(gtx layout.Context, th *material.Theme) layout.Dimension
 		switch event := event.(type) {
 		case component.AppBarNavigationClicked:
 			// log.Printf("navigation clicked: %+v", event)
-			r.SwitchTo(Route{Path: PageHome})
+			if r.current.Path == PageTunnel {
+				r.SwitchTo(Route{Path: PageEntryPoint})
+			} else {
+				r.SwitchTo(Route{Path: PageTunnel})
+			}
 		case component.AppBarContextMenuDismissed:
 			// log.Printf("Context menu dismissed: %+v", event)
-			r.SwitchTo(Route{Path: PageHome})
+			r.SwitchTo(Route{Path: PageTunnel})
 		case component.AppBarOverflowActionClicked:
 			if event.Tag == OverflowActionAbout {
 				r.SwitchTo(Route{Path: PageAbout})

@@ -12,12 +12,14 @@ import (
 	"gioui.org/op"
 	"github.com/go-gost/gost-plus/config"
 	"github.com/go-gost/gost-plus/tunnel"
+	"github.com/go-gost/gost-plus/tunnel/entrypoint"
 	"github.com/go-gost/gost-plus/ui"
 )
 
 func main() {
 	config.Init()
 	tunnel.LoadConfig()
+	entrypoint.LoadConfig()
 
 	go func() {
 		w := app.NewWindow(

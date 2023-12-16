@@ -88,9 +88,9 @@ func (p *httpAddPage) Init(opts ...PageOption) {
 				},
 				Layout: func(gtx C, bg, fg color.NRGBA) D {
 					if p.wgDone.Clicked(gtx) {
-						defer p.router.SwitchTo(Route{Path: PageHome})
+						defer p.router.SwitchTo(Route{Path: PageTunnel})
 						p.createTunnel()
-						tunnel.SaveTunnel()
+						tunnel.SaveConfig()
 					}
 					return component.SimpleIconButton(bg, fg, &p.wgDone, icons.IconDone).Layout(gtx)
 				},
@@ -210,7 +210,7 @@ func (p *httpAddPage) createTunnel() error {
 	if p.bHost.Value {
 		hostname = strings.TrimSpace(p.hostname.Text())
 	}
-	srv := tunnel.NewHTTPTunnel(
+	tun := tunnel.NewHTTPTunnel(
 		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
 		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
 		tunnel.UsernameOption(username),
@@ -219,11 +219,13 @@ func (p *httpAddPage) createTunnel() error {
 		tunnel.EnableTLSOption(p.bTLS.Value),
 	)
 
-	if err := srv.Run(); err != nil {
+	tunnel.Add(tun)
+
+	if err := tun.Run(); err != nil {
+		tun.Close()
 		return err
 	}
 
-	tunnel.AddTunnel(srv)
 	return nil
 }
 
@@ -296,7 +298,7 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 	}
 
 	p.id = options.ID
-	s := tunnel.GetTunnelID(p.id)
+	s := tunnel.Get(p.id)
 	if s != nil {
 		sopts := s.Options()
 		p.name.SetText(sopts.Name)
@@ -320,14 +322,14 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 				Tag:  &p.wgFavorite,
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
-				s := tunnel.GetTunnelID(p.id)
+				s := tunnel.Get(p.id)
 				if s == nil {
 					return D{}
 				}
 
 				if p.wgFavorite.Clicked(gtx) {
 					s.Favorite(!s.IsFavorite())
-					tunnel.SaveTunnel()
+					tunnel.SaveConfig()
 				}
 
 				btn := component.SimpleIconButton(bg, fg, &p.wgFavorite, icons.IconFavorite)
@@ -345,14 +347,14 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 				Tag:  &p.wgState,
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
-				s := tunnel.GetTunnelID(p.id)
+				s := tunnel.Get(p.id)
 				if p.wgState.Clicked(gtx) && s != nil {
 					if s.IsClosed() {
 						s = p.createTunnel()
 					} else {
 						s.Close()
 					}
-					tunnel.SaveTunnel()
+					tunnel.SaveConfig()
 				}
 
 				if s != nil && !s.IsClosed() {
@@ -369,9 +371,9 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				if p.wgDelete.Clicked(gtx) {
-					tunnel.DeleteTunnel(p.id)
-					tunnel.SaveTunnel()
-					p.router.SwitchTo(Route{Path: PageHome})
+					tunnel.Delete(p.id)
+					tunnel.SaveConfig()
+					p.router.SwitchTo(Route{Path: PageTunnel})
 				}
 				return component.SimpleIconButton(bg, fg, &p.wgDelete, icons.IconDelete).Layout(gtx)
 			},
@@ -383,12 +385,12 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				if p.wgDone.Clicked(gtx) {
-					defer p.router.SwitchTo(Route{Path: PageHome})
+					defer p.router.SwitchTo(Route{Path: PageTunnel})
 
-					if s := tunnel.GetTunnelID(p.id); s != nil {
+					if s := tunnel.Get(p.id); s != nil {
 						s.Close()
 						p.createTunnel()
-						tunnel.SaveTunnel()
+						tunnel.SaveConfig()
 					}
 				}
 				return component.SimpleIconButton(bg, fg, &p.wgDone, icons.IconDone).Layout(gtx)
@@ -410,7 +412,7 @@ func (p *httpEditPage) createTunnel() tunnel.Tunnel {
 	if p.bHost.Value {
 		hostname = strings.TrimSpace(p.hostname.Text())
 	}
-	s := tunnel.NewHTTPTunnel(
+	tun := tunnel.NewHTTPTunnel(
 		tunnel.IDOption(p.id),
 		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
 		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
@@ -420,12 +422,14 @@ func (p *httpEditPage) createTunnel() tunnel.Tunnel {
 		tunnel.EnableTLSOption(p.bTLS.Value),
 	)
 
-	if err := s.Run(); err != nil {
+	tunnel.Set(tun)
+
+	if err := tun.Run(); err != nil {
+		tun.Close()
 		log.Println(err)
 	}
-	tunnel.SetTunnel(s)
 
-	return s
+	return tun
 }
 
 func (p *httpEditPage) Layout(gtx C, th *material.Theme) D {
@@ -447,7 +451,7 @@ func (p *httpEditPage) layout(gtx C, th *material.Theme) D {
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return layoutHeader(gtx, th, tunnel.GetTunnelID(p.id), &p.wgID, &p.wgEntrypoint)
+			return layoutHeader(gtx, th, tunnel.Get(p.id), &p.wgID, &p.wgEntrypoint)
 		}),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
@@ -466,7 +470,7 @@ func (p *httpEditPage) layout(gtx C, th *material.Theme) D {
 				if addr == "" {
 					return nil
 				}
-				if _, _, err := net.SplitHostPort(addr); err != nil {
+				if _, err := net.ResolveTCPAddr("tcp", addr); err != nil {
 					return fmt.Errorf("invalid address format, should be [IP]:PORT or [HOST]:PORT")
 				}
 				return nil

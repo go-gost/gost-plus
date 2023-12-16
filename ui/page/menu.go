@@ -22,6 +22,9 @@ type menuPage struct {
 	wgHTTP widget.Clickable
 	wgTCP  widget.Clickable
 	wgUDP  widget.Clickable
+
+	wgEntryPointTCP widget.Clickable
+	wgEntryPointUDP widget.Clickable
 }
 
 func NewMenuPage(r *Router) Page {
@@ -57,6 +60,10 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 		}
 		if p.wgUDP.Clicked(gtx) {
 			p.router.SwitchTo(Route{Path: PageNewUDP})
+			return true
+		}
+		if p.wgEntryPointTCP.Clicked(gtx) {
+			p.router.SwitchTo(Route{Path: PageNewTCPEntryPoint})
 			return true
 		}
 
@@ -120,6 +127,23 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 							})
 						})
 					}),
+					layout.Rigid(layout.Spacer{Height: 10}.Layout),
+					layout.Rigid(func(gtx C) D {
+						label := material.H6(th, "EntryPoints")
+						label.Font.Weight = font.Bold
+						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, label.Layout)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
+							return component.Surface(th).Layout(gtx, func(gtx C) D {
+								return p.wgEntryPointTCP.Layout(gtx, func(gtx C) D {
+									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
+										return p.layoutCard(gtx, th, "TCP", "Create an entrypoint to connect to the specified TCP tunnel")
+									})
+								})
+							})
+						})
+					}),
 				)
 			})
 		})
@@ -141,14 +165,14 @@ func (p *menuPage) layoutCard(gtx C, th *material.Theme, name, desc string) D {
 					title.Font.Weight = font.Bold
 					return title.Layout(gtx)
 				}),
-				layout.Rigid(layout.Spacer{Height: 10}.Layout),
+				layout.Rigid(layout.Spacer{Height: 5}.Layout),
 				layout.Rigid(func(gtx C) D {
 					title := material.Body1(th, desc)
 					return title.Layout(gtx)
 				}),
 			)
 		}),
-		layout.Rigid(layout.Spacer{Width: 10}.Layout),
+		layout.Rigid(layout.Spacer{Width: 5}.Layout),
 		layout.Rigid(func(gtx C) D {
 			return icons.IconForward.Layout(gtx, color.NRGBA(colornames.Grey500))
 		}),

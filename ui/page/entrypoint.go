@@ -12,16 +12,16 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
-	"github.com/go-gost/gost-plus/tunnel"
+	"github.com/go-gost/gost-plus/tunnel/entrypoint"
 	"github.com/go-gost/gost-plus/ui/icons"
 	"golang.org/x/exp/shiny/materialdesign/colornames"
 )
 
-type tunnelState struct {
+type entryPointState struct {
 	editor widget.Clickable
 }
 
-type tunnelPage struct {
+type entryPointPage struct {
 	router *Router
 
 	list layout.List
@@ -29,22 +29,22 @@ type tunnelPage struct {
 	wgFavorite widget.Clickable
 	wgAdd      widget.Clickable
 
-	tunnels  map[int]*tunnelState
-	favorite atomic.Bool
+	entryPoints map[int]*entryPointState
+	favorite    atomic.Bool
 }
 
-func NewTunnelPage(r *Router) Page {
-	return &tunnelPage{
+func NewEntryPointPage(r *Router) Page {
+	return &entryPointPage{
 		router: r,
 		list: layout.List{
 			Axis:      layout.Vertical,
 			Alignment: layout.Middle,
 		},
-		tunnels: make(map[int]*tunnelState),
+		entryPoints: make(map[int]*entryPointState),
 	}
 }
 
-func (p *tunnelPage) Init(opts ...PageOption) {
+func (p *entryPointPage) Init(opts ...PageOption) {
 	p.router.bar.SetActions(
 		[]component.AppBarAction{
 			{
@@ -87,22 +87,22 @@ func (p *tunnelPage) Init(opts ...PageOption) {
 		},
 	)
 
-	p.router.bar.Title = "Tunnels"
+	p.router.bar.Title = "EntryPoints"
 	p.router.bar.NavigationIcon = icons.IconHome
 }
 
-func (p *tunnelPage) Layout(gtx C, th *material.Theme) D {
+func (p *entryPointPage) Layout(gtx C, th *material.Theme) D {
 	favorite := p.favorite.Load()
 	// gtx.Constraints.Min.X = gtx.Constraints.Max.X
-	return p.list.Layout(gtx, tunnel.Count(), func(gtx C, index int) D {
-		s := tunnel.GetIndex(index)
+	return p.list.Layout(gtx, entrypoint.Count(), func(gtx C, index int) D {
+		s := entrypoint.GetIndex(index)
 		if s == nil {
-			delete(p.tunnels, index)
+			delete(p.entryPoints, index)
 			return D{}
 		}
 
-		if p.tunnels[index] == nil {
-			p.tunnels[index] = &tunnelState{}
+		if p.entryPoints[index] == nil {
+			p.entryPoints[index] = &entryPointState{}
 		}
 
 		if favorite && !s.IsFavorite() {
@@ -111,19 +111,12 @@ func (p *tunnelPage) Layout(gtx C, th *material.Theme) D {
 
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
-				surface := component.Surface(th)
-				return surface.Layout(gtx, func(gtx C) D {
-					state := p.tunnels[index]
+				return component.Surface(th).Layout(gtx, func(gtx C) D {
+					state := p.entryPoints[index]
 					if state.editor.Clicked(gtx) {
 						switch s.Type() {
-						case tunnel.FileTunnel:
-							p.router.SwitchTo(Route{Path: PageEditFile, ID: s.ID()})
-						case tunnel.HTTPTunnel:
-							p.router.SwitchTo(Route{Path: PageEditHTTP, ID: s.ID()})
-						case tunnel.TCPTunnel:
-							p.router.SwitchTo(Route{Path: PageEditTCP, ID: s.ID()})
-						case tunnel.UDPTunnel:
-							p.router.SwitchTo(Route{Path: PageEditUDP, ID: s.ID()})
+						case entrypoint.TCPEntryPoint:
+							p.router.SwitchTo(Route{Path: PageEditTCPEntryPoint, ID: s.ID()})
 						}
 						op.InvalidateOp{}.Add(gtx.Ops)
 					}
@@ -138,7 +131,7 @@ func (p *tunnelPage) Layout(gtx C, th *material.Theme) D {
 	})
 }
 
-func (p *tunnelPage) layout(gtx C, th *material.Theme, s tunnel.Tunnel) D {
+func (p *entryPointPage) layout(gtx C, th *material.Theme, ep entrypoint.EntryPoint) D {
 	return layout.Flex{
 		Alignment: layout.Middle,
 		Spacing:   layout.SpaceBetween,
@@ -146,21 +139,21 @@ func (p *tunnelPage) layout(gtx C, th *material.Theme, s tunnel.Tunnel) D {
 		layout.Flexed(1, func(gtx C) D {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					label := material.Body1(th, s.ID())
+					label := material.Body1(th, ep.ID())
 					label.Font.Weight = font.Bold
 					return label.Layout(gtx)
 				}),
 				layout.Rigid(layout.Spacer{Height: 5}.Layout),
-				layout.Rigid(material.Body2(th, fmt.Sprintf("Type: %s", strings.ToUpper(s.Type()))).Layout),
+				layout.Rigid(material.Body2(th, fmt.Sprintf("Type: %s", strings.ToUpper(ep.Type()))).Layout),
 				layout.Rigid(layout.Spacer{Height: 5}.Layout),
-				layout.Rigid(material.Body2(th, fmt.Sprintf("Name: %s", s.Name())).Layout),
+				layout.Rigid(material.Body2(th, fmt.Sprintf("Name: %s", ep.Name())).Layout),
 				layout.Rigid(layout.Spacer{Height: 5}.Layout),
-				layout.Rigid(material.Body2(th, fmt.Sprintf("Endpoint: %s", s.Endpoint())).Layout),
+				layout.Rigid(material.Body2(th, fmt.Sprintf("Endpoint: %s", ep.Endpoint())).Layout),
 				layout.Rigid(layout.Spacer{Height: 5}.Layout),
-				layout.Rigid(material.Body2(th, fmt.Sprintf("Entrypoint: %s", s.Entrypoint())).Layout),
+				layout.Rigid(material.Body2(th, fmt.Sprintf("Entrypoint: %s", ep.Entrypoint())).Layout),
 				layout.Rigid(layout.Spacer{Height: 5}.Layout),
 				layout.Rigid(func(gtx C) D {
-					if err := s.Err(); !s.IsClosed() && err != nil {
+					if err := ep.Err(); !ep.IsClosed() && err != nil {
 						label := material.Body2(th, err.Error())
 						label.Color = color.NRGBA(colornames.Red500)
 						return label.Layout(gtx)
@@ -172,10 +165,10 @@ func (p *tunnelPage) layout(gtx C, th *material.Theme, s tunnel.Tunnel) D {
 		layout.Rigid(layout.Spacer{Width: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
 			c := colornames.Green500
-			if s.Err() != nil {
+			if ep.Err() != nil {
 				c = colornames.Red500
 			}
-			if s.IsClosed() {
+			if ep.IsClosed() {
 				c = colornames.Grey500
 			}
 			return icons.IconTunnelState.Layout(gtx, color.NRGBA(c))

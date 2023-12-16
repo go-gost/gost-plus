@@ -9,12 +9,13 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/go-gost/gost-plus/tunnel"
+	"github.com/go-gost/gost-plus/ui/icons"
 	"golang.org/x/exp/shiny/materialdesign/colornames"
 )
 
 const (
-	PageHome     = "/"
 	PageMenu     = "/menu"
+	PageTunnel   = "/tunnel"
 	PageNewFile  = "/tunnel/file/create"
 	PageNewHTTP  = "/tunnel/http/create"
 	PageNewTCP   = "/tunnel/tcp/create"
@@ -23,6 +24,10 @@ const (
 	PageEditHTTP = "/tunnel/http/edit"
 	PageEditTCP  = "/tunnel/tcp/edit"
 	PageEditUDP  = "/tunnel/udp/edit"
+
+	PageEntryPoint        = "/entrypoint"
+	PageNewTCPEntryPoint  = "/entrypoint/tcp/create"
+	PageEditTCPEntryPoint = "/entrypoint/tcp/edit"
 
 	PageAbout = "/about"
 )
@@ -74,15 +79,13 @@ func layoutHeader(gtx C, th *material.Theme, tun tunnel.Tunnel, wgID, wgEntrypoi
 						label.Font.Weight = font.Bold
 						return label.Layout(gtx)
 					}),
-					layout.Rigid(layout.Spacer{Width: 10}.Layout),
+					layout.Rigid(layout.Spacer{Width: 5}.Layout),
 					layout.Rigid(func(gtx C) D {
-						label := material.Body1(th, "Copy")
-						label.Color = color.NRGBA(colornames.Blue500)
+						c := color.NRGBA(colornames.Blue500)
 						if copied {
-							label = material.Body1(th, "Copied")
-							label.Color = color.NRGBA(colornames.Green500)
+							c = color.NRGBA(colornames.Green500)
 						}
-						return label.Layout(gtx)
+						return icons.IconCopy.Layout(gtx, c)
 					}),
 				)
 			})
@@ -107,15 +110,13 @@ func layoutHeader(gtx C, th *material.Theme, tun tunnel.Tunnel, wgID, wgEntrypoi
 							label := material.Body1(th, tun.Entrypoint())
 							return label.Layout(gtx)
 						}),
-						layout.Rigid(layout.Spacer{Width: 10}.Layout),
+						layout.Rigid(layout.Spacer{Width: 5}.Layout),
 						layout.Rigid(func(gtx C) D {
-							label := material.Body1(th, "Copy")
-							label.Color = color.NRGBA(colornames.Blue500)
+							c := color.NRGBA(colornames.Blue500)
 							if copied {
-								label = material.Body1(th, "Copied")
-								label.Color = color.NRGBA(colornames.Green500)
+								c = color.NRGBA(colornames.Green500)
 							}
-							return label.Layout(gtx)
+							return icons.IconCopy.Layout(gtx, c)
 						}),
 					)
 				})

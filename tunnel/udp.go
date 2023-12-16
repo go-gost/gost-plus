@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	"github.com/go-gost/core/chain"
@@ -29,6 +30,9 @@ type udpTunnel struct {
 	favorite atomic.Bool
 
 	cclose chan struct{}
+
+	err error
+	mu  sync.RWMutex
 }
 
 func NewUDPTunnel(opts ...Option) Tunnel {
@@ -49,7 +53,7 @@ func NewUDPTunnel(opts ...Option) Tunnel {
 	}
 
 	if options.Name == "" {
-		options.Name = fmt.Sprintf("UDP-%s", endpoint)
+		options.Name = endpoint
 	}
 
 	s := &udpTunnel{
@@ -77,8 +81,8 @@ func (s *udpTunnel) Endpoint() string {
 	return s.opts.Endpoint
 }
 
-func (f *udpTunnel) Entrypoint() string {
-	return fmt.Sprintf("%s.%s", f.endpoint, endpointAddr)
+func (s *udpTunnel) Entrypoint() string {
+	return fmt.Sprintf("%s.%s", s.endpoint, EndpointAddr)
 }
 
 func (s *udpTunnel) Options() Options {
@@ -116,18 +120,22 @@ func (s *udpTunnel) init() error {
 
 	s.config = &config.Config{
 		Services: []*config.ServiceConfig{rudp},
-		Chains:   []*config.ChainConfig{chainConfig(s.opts.ID, s.opts.Name)},
+		Chains:   []*config.ChainConfig{ChainConfig(s.opts.ID, s.opts.Name)},
 	}
 	return nil
 }
 
-func (s *udpTunnel) Run() error {
+func (s *udpTunnel) Run() (err error) {
 	if s.IsClosed() {
 		return ErrTunnelClosed
 	}
 
-	if err := s.init(); err != nil {
-		return err
+	defer func() {
+		s.setErr(err)
+	}()
+
+	if err = s.init(); err != nil {
+		return
 	}
 
 	log := logger.Default().WithFields(map[string]any{
@@ -136,10 +144,11 @@ func (s *udpTunnel) Run() error {
 	})
 
 	{
-		ch, err := chain_parser.ParseChain(s.config.Chains[0], log)
+		var ch chain.Chainer
+		ch, err = chain_parser.ParseChain(s.config.Chains[0], log)
 		if err != nil {
 			log.Error(err)
-			return err
+			return
 		}
 
 		cfg := s.config.Services[0]
@@ -148,15 +157,15 @@ func (s *udpTunnel) Run() error {
 			listener.ChainOption(ch),
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rudp"})),
 		)
-		if err := ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
-			return err
+		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
+			return
 		}
 
 		h := remote.NewHandler(
 			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "rudp"})),
 		)
-		if err := h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
-			return err
+		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
+			return
 		}
 
 		node := cfg.Forwarder.Nodes[0]
@@ -169,7 +178,9 @@ func (s *udpTunnel) Run() error {
 		s.forward = xservice.NewService(s.opts.Name, ln, h, xservice.LoggerOption(log))
 	}
 
-	go s.forward.Serve()
+	go func() {
+		s.setErr(s.forward.Serve())
+	}()
 
 	return nil
 }
@@ -196,4 +207,16 @@ func (s *udpTunnel) IsClosed() bool {
 	default:
 		return false
 	}
+}
+
+func (s *udpTunnel) setErr(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.err = err
+}
+
+func (s *udpTunnel) Err() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.err
 }

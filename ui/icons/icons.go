@@ -45,6 +45,7 @@ var (
 	IconStop        = mustIcon(icons.AVStop)
 	IconBack        = mustIcon(icons.NavigationArrowBack)
 	IconClose       = mustIcon(icons.ContentClear)
+	IconCopy        = mustIcon(icons.ContentContentCopy)
 )
 
 func mustIcon(data []byte) *widget.Icon {

@@ -1,4 +1,4 @@
-package tunnel
+package entrypoint
 
 import (
 	"crypto/md5"
@@ -12,19 +12,20 @@ import (
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/service"
+	"github.com/go-gost/gost-plus/tunnel"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
-	"github.com/go-gost/x/handler/forward/remote"
+	"github.com/go-gost/x/handler/forward/local"
 	"github.com/go-gost/x/hop"
-	"github.com/go-gost/x/listener/rtcp"
+	"github.com/go-gost/x/listener/tcp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
 	"github.com/google/uuid"
 )
 
-type tcpTunnel struct {
+type tcpEntryPoint struct {
 	endpoint string
-	opts     Options
+	opts     tunnel.Options
 	config   *config.Config
 	forward  service.Service
 	favorite atomic.Bool
@@ -35,8 +36,8 @@ type tcpTunnel struct {
 	mu  sync.RWMutex
 }
 
-func NewTCPTunnel(opts ...Option) Tunnel {
-	var options Options
+func NewTCPEntryPoint(opts ...tunnel.Option) EntryPoint {
+	var options tunnel.Options
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -49,14 +50,14 @@ func NewTCPTunnel(opts ...Option) Tunnel {
 	endpoint := hex.EncodeToString(v[:8])
 
 	if options.Endpoint == "" {
-		options.Endpoint = "localhost:8080"
+		options.Endpoint = "localhost:8000"
 	}
 
 	if options.Name == "" {
 		options.Name = endpoint
 	}
 
-	s := &tcpTunnel{
+	s := &tcpEntryPoint{
 		endpoint: endpoint,
 		opts:     options,
 		cclose:   make(chan struct{}),
@@ -65,69 +66,69 @@ func NewTCPTunnel(opts ...Option) Tunnel {
 	return s
 }
 
-func (s *tcpTunnel) ID() string {
+func (s *tcpEntryPoint) ID() string {
 	return s.opts.ID
 }
 
-func (s *tcpTunnel) Type() string {
-	return TCPTunnel
+func (s *tcpEntryPoint) Type() string {
+	return TCPEntryPoint
 }
 
-func (s *tcpTunnel) Name() string {
+func (s *tcpEntryPoint) Name() string {
 	return s.opts.Name
 }
 
-func (s *tcpTunnel) Endpoint() string {
+func (s *tcpEntryPoint) Endpoint() string {
+	return fmt.Sprintf("%s.%s", s.endpoint, tunnel.EndpointAddr)
+}
+
+func (s *tcpEntryPoint) Entrypoint() string {
 	return s.opts.Endpoint
 }
 
-func (s *tcpTunnel) Entrypoint() string {
-	return fmt.Sprintf("%s.%s", s.endpoint, EndpointAddr)
-}
-
-func (s *tcpTunnel) Options() Options {
+func (s *tcpEntryPoint) Options() tunnel.Options {
 	return s.opts
 }
 
-func (s *tcpTunnel) Favorite(b bool) {
+func (s *tcpEntryPoint) Favorite(b bool) {
 	s.favorite.Store(b)
 }
 
-func (s *tcpTunnel) IsFavorite() bool {
+func (s *tcpEntryPoint) IsFavorite() bool {
 	return s.favorite.Load()
 }
 
-func (s *tcpTunnel) init() error {
-	rtcp := &config.ServiceConfig{
+func (s *tcpEntryPoint) init() error {
+	tcp := &config.ServiceConfig{
 		Name: s.opts.Name,
-		Addr: s.opts.Hostname,
+		Addr: s.opts.Endpoint,
 		Handler: &config.HandlerConfig{
-			Type: "rtcp",
+			Type:  "tcp",
+			Chain: s.opts.Name,
 		},
 		Listener: &config.ListenerConfig{
-			Type:  "rtcp",
-			Chain: s.opts.Name,
+			Type: "tcp",
 		},
 		Forwarder: &config.ForwarderConfig{
 			Nodes: []*config.ForwardNodeConfig{
 				{
 					Name: s.opts.Name,
-					Addr: s.opts.Endpoint,
+					Addr: s.Endpoint(),
 				},
 			},
 		},
 	}
 
 	s.config = &config.Config{
-		Services: []*config.ServiceConfig{rtcp},
-		Chains:   []*config.ChainConfig{ChainConfig(s.opts.ID, s.opts.Name)},
+		Services: []*config.ServiceConfig{tcp},
+		Chains:   []*config.ChainConfig{tunnel.ChainConfig(s.opts.ID, s.opts.Name)},
 	}
 	return nil
 }
 
-func (s *tcpTunnel) Run() (err error) {
+func (s *tcpEntryPoint) Run() (err error) {
 	if s.IsClosed() {
-		return ErrTunnelClosed
+		return ErrEntryPointClosed
 	}
 
 	defer func() {
@@ -152,17 +153,20 @@ func (s *tcpTunnel) Run() (err error) {
 		}
 
 		cfg := s.config.Services[0]
-		ln := rtcp.NewListener(
+		ln := tcp.NewListener(
 			listener.AddrOption(cfg.Addr),
-			listener.ChainOption(ch),
-			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})),
+			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "tcp"})),
 		)
 		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
 			return
 		}
 
-		h := remote.NewHandler(
-			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "rtcp"})),
+		h := local.NewHandler(
+			handler.RouterOption(chain.NewRouter(
+				chain.ChainRouterOption(ch),
+				chain.LoggerRouterOption(log),
+			)),
+			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "tcp"})),
 		)
 		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
 			return
@@ -185,7 +189,7 @@ func (s *tcpTunnel) Run() (err error) {
 	return nil
 }
 
-func (s *tcpTunnel) Close() error {
+func (s *tcpEntryPoint) Close() error {
 	defer func() {
 		select {
 		case <-s.cclose:
@@ -200,7 +204,7 @@ func (s *tcpTunnel) Close() error {
 	return nil
 }
 
-func (s *tcpTunnel) IsClosed() bool {
+func (s *tcpEntryPoint) IsClosed() bool {
 	select {
 	case <-s.cclose:
 		return true
@@ -209,13 +213,13 @@ func (s *tcpTunnel) IsClosed() bool {
 	}
 }
 
-func (s *tcpTunnel) setErr(err error) {
+func (s *tcpEntryPoint) setErr(err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.err = err
 }
 
-func (s *tcpTunnel) Err() error {
+func (s *tcpEntryPoint) Err() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.err

@@ -7,15 +7,13 @@ GOBUILD=CGO_ENABLED=0 go build --ldflags="-s -w" -v -x -a
 GOFILES=*.go
 
 PLATFORM_LIST = \
-	darwin-amd64 \
-	darwin-arm64 \
 	linux-amd64
 
 WINDOWS_ARCH_LIST = \
 	windows-amd64
 
 linux-amd64:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build --ldflags="-s -w" -v -x -a
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build --ldflags="-s -w" -v -x -a -o $(BINDIR)/$(NAME)-$@ $(GOFILES)
     
 darwin-amd64:
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $(BINDIR)/$(NAME)-$@ $(GOFILES)

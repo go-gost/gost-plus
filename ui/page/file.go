@@ -75,9 +75,9 @@ func (p *fileAddPage) Init(opts ...PageOption) {
 				},
 				Layout: func(gtx C, bg, fg color.NRGBA) D {
 					if p.wgDone.Clicked(gtx) {
-						defer p.router.SwitchTo(Route{Path: PageHome})
+						defer p.router.SwitchTo(Route{Path: PageTunnel})
 						p.createTunnel()
-						tunnel.SaveTunnel()
+						tunnel.SaveConfig()
 					}
 					return component.SimpleIconButton(bg, fg, &p.wgDone, icons.IconDone).Layout(gtx)
 				},
@@ -186,11 +186,13 @@ func (p *fileAddPage) createTunnel() error {
 		tunnel.PasswordOption(password),
 	)
 
+	tunnel.Add(tun)
+
 	if err := tun.Run(); err != nil {
+		tun.Close()
 		return err
 	}
 
-	tunnel.AddTunnel(tun)
 	return nil
 }
 
@@ -252,7 +254,7 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 	}
 
 	p.id = options.ID
-	s := tunnel.GetTunnelID(p.id)
+	s := tunnel.Get(p.id)
 	if s != nil {
 		sopts := s.Options()
 		p.name.SetText(sopts.Name)
@@ -271,14 +273,14 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 				Tag:  &p.wgFavorite,
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
-				s := tunnel.GetTunnelID(p.id)
+				s := tunnel.Get(p.id)
 				if s == nil {
 					return D{}
 				}
 
 				if p.wgFavorite.Clicked(gtx) {
 					s.Favorite(!s.IsFavorite())
-					tunnel.SaveTunnel()
+					tunnel.SaveConfig()
 				}
 
 				btn := component.SimpleIconButton(bg, fg, &p.wgFavorite, icons.IconFavorite)
@@ -296,7 +298,7 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 				Tag:  &p.wgState,
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
-				s := tunnel.GetTunnelID(p.id)
+				s := tunnel.Get(p.id)
 				if s == nil {
 					return D{}
 				}
@@ -307,7 +309,7 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 					} else {
 						s.Close()
 					}
-					tunnel.SaveTunnel()
+					tunnel.SaveConfig()
 				}
 
 				if s != nil && !s.IsClosed() {
@@ -324,9 +326,9 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				if p.wgDelete.Clicked(gtx) {
-					tunnel.DeleteTunnel(p.id)
-					tunnel.SaveTunnel()
-					p.router.SwitchTo(Route{Path: PageHome})
+					tunnel.Delete(p.id)
+					tunnel.SaveConfig()
+					p.router.SwitchTo(Route{Path: PageTunnel})
 				}
 				return component.SimpleIconButton(bg, fg, &p.wgDelete, icons.IconDelete).Layout(gtx)
 			},
@@ -338,12 +340,12 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 			},
 			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				if p.wgDone.Clicked(gtx) {
-					defer p.router.SwitchTo(Route{Path: PageHome})
+					defer p.router.SwitchTo(Route{Path: PageTunnel})
 
-					if s := tunnel.GetTunnelID(p.id); s != nil {
+					if s := tunnel.Get(p.id); s != nil {
 						s.Close()
 						p.createTunnel()
-						tunnel.SaveTunnel()
+						tunnel.SaveConfig()
 					}
 				}
 				return component.SimpleIconButton(bg, fg, &p.wgDone, icons.IconDone).Layout(gtx)
@@ -361,7 +363,7 @@ func (p *fileEditPage) createTunnel() tunnel.Tunnel {
 		username = strings.TrimSpace(p.username.Text())
 		password = strings.TrimSpace(p.password.Text())
 	}
-	s := tunnel.NewFileTunnel(
+	tun := tunnel.NewFileTunnel(
 		tunnel.IDOption(p.id),
 		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
 		tunnel.EndpointOption(strings.TrimSpace(p.path.Text())),
@@ -369,12 +371,14 @@ func (p *fileEditPage) createTunnel() tunnel.Tunnel {
 		tunnel.PasswordOption(password),
 	)
 
-	if err := s.Run(); err != nil {
+	tunnel.Set(tun)
+
+	if err := tun.Run(); err != nil {
+		tun.Close()
 		log.Println(err)
 	}
-	tunnel.SetTunnel(s)
 
-	return s
+	return tun
 }
 
 func (p *fileEditPage) Layout(gtx C, th *material.Theme) D {
@@ -396,7 +400,7 @@ func (p *fileEditPage) layout(gtx C, th *material.Theme) D {
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return layoutHeader(gtx, th, tunnel.GetTunnelID(p.id), &p.wgID, &p.wgEntrypoint)
+			return layoutHeader(gtx, th, tunnel.Get(p.id), &p.wgID, &p.wgEntrypoint)
 		}),
 		layout.Rigid(func(gtx C) D {
 			div := component.Divider(th)

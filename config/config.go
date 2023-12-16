@@ -107,9 +107,10 @@ type Tunnel struct {
 }
 
 type Config struct {
-	Settings *Settings
-	Tunnels  []*Tunnel
-	Log      *config.LogConfig
+	Settings    *Settings
+	Tunnels     []*Tunnel
+	EntryPoints []*Tunnel
+	Log         *config.LogConfig
 }
 
 func (c *Config) Load() error {

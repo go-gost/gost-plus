@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	endpointAddr = "gost.plus"
-	serverName   = "tunnel.gost.plus"
-	serverAddr   = serverName + ":443"
+	EndpointAddr = "gost.plus"
+	ServerName   = "tunnel.gost.plus"
+	ServerAddr   = ServerName + ":443"
 )
 
 const (
@@ -94,54 +94,64 @@ type Tunnel interface {
 	IsFavorite() bool
 	Close() error
 	IsClosed() bool
+	Err() error
 }
 
 type tunnelList struct {
-	tunnels []Tunnel
-	mux     sync.RWMutex
+	list []Tunnel
+	mux  sync.RWMutex
 }
 
-func (sl *tunnelList) Count() int {
-	sl.mux.RLock()
-	defer sl.mux.RUnlock()
-	return len(sl.tunnels)
+var (
+	tunnels tunnelList
+)
+
+func Count() int {
+	tunnels.mux.RLock()
+	defer tunnels.mux.RUnlock()
+	return len(tunnels.list)
 }
 
-func (sl *tunnelList) Add(s Tunnel) {
-	sl.mux.Lock()
-	defer sl.mux.Unlock()
-	sl.tunnels = append(sl.tunnels, s)
+func Add(s Tunnel) {
+	tunnels.mux.Lock()
+	defer tunnels.mux.Unlock()
+	tunnels.list = append(tunnels.list, s)
 }
 
-func (sl *tunnelList) Set(s Tunnel) {
+func Set(s Tunnel) {
 	if s == nil {
 		return
 	}
+	t := Get(s.ID())
+	if t == nil {
+		return
+	}
+	s.Favorite(t.IsFavorite())
 
-	sl.mux.Lock()
-	defer sl.mux.Unlock()
+	tunnels.mux.Lock()
+	defer tunnels.mux.Unlock()
 
-	for i, sv := range sl.tunnels {
+	for i, sv := range tunnels.list {
 		if sv != nil && sv.ID() == s.ID() {
-			sl.tunnels[i] = s
+			tunnels.list[i] = s
 		}
 	}
 }
 
-func (sl *tunnelList) Get(index int) Tunnel {
-	sl.mux.RLock()
-	defer sl.mux.RUnlock()
-	if index < 0 || index >= len(sl.tunnels) {
+func GetIndex(index int) Tunnel {
+	tunnels.mux.RLock()
+	defer tunnels.mux.RUnlock()
+	if index < 0 || index >= len(tunnels.list) {
 		return nil
 	}
-	return sl.tunnels[index]
+	return tunnels.list[index]
 }
 
-func (sl *tunnelList) GetID(id string) Tunnel {
-	sl.mux.RLock()
-	defer sl.mux.RUnlock()
+func Get(id string) Tunnel {
+	tunnels.mux.RLock()
+	defer tunnels.mux.RUnlock()
 
-	for _, s := range sl.tunnels {
+	for _, s := range tunnels.list {
 		if s != nil && s.ID() == id {
 			return s
 		}
@@ -149,53 +159,20 @@ func (sl *tunnelList) GetID(id string) Tunnel {
 	return nil
 }
 
-func (sl *tunnelList) DeleteID(id string) {
-	sl.mux.Lock()
-	defer sl.mux.Unlock()
+func Delete(id string) {
+	tunnels.mux.Lock()
+	defer tunnels.mux.Unlock()
 
-	for i, s := range sl.tunnels {
+	for i, s := range tunnels.list {
 		if s != nil && s.ID() == id {
 			s.Close()
-			sl.tunnels[i] = nil
+			tunnels.list[i] = nil
 			return
 		}
 	}
 }
 
-var (
-	tunnels tunnelList
-)
-
-func TunnelCount() int {
-	return tunnels.Count()
-}
-
-func AddTunnel(s Tunnel) {
-	tunnels.Add(s)
-}
-
-func SetTunnel(s Tunnel) {
-	t := tunnels.GetID(s.ID())
-	if t == nil {
-		return
-	}
-	s.Favorite(t.IsFavorite())
-	tunnels.Set(s)
-}
-
-func GetTunnel(index int) Tunnel {
-	return tunnels.Get(index)
-}
-
-func GetTunnelID(id string) Tunnel {
-	return tunnels.GetID(id)
-}
-
-func DeleteTunnel(id string) {
-	tunnels.DeleteID(id)
-}
-
-func chainConfig(id string, name string) *xconfig.ChainConfig {
+func ChainConfig(id string, name string) *xconfig.ChainConfig {
 	return &xconfig.ChainConfig{
 		Name: name,
 		Hops: []*xconfig.HopConfig{
@@ -204,7 +181,7 @@ func chainConfig(id string, name string) *xconfig.ChainConfig {
 				Nodes: []*xconfig.NodeConfig{
 					{
 						Name: name,
-						Addr: serverAddr,
+						Addr: ServerAddr,
 						Connector: &xconfig.ConnectorConfig{
 							Type:     "tunnel",
 							Metadata: map[string]any{"tunnel.id": id},
@@ -213,7 +190,7 @@ func chainConfig(id string, name string) *xconfig.ChainConfig {
 							Type: "wss",
 							TLS: &xconfig.TLSConfig{
 								Secure:     true,
-								ServerName: serverName,
+								ServerName: ServerName,
 							},
 						},
 					},
@@ -249,16 +226,16 @@ func LoadConfig() {
 		}
 
 		s.Favorite(tun.Favorite)
-		tunnels.Add(s)
+		Add(s)
 	}
 }
 
-func SaveTunnel() error {
+func SaveConfig() error {
 	cfg := config.Global()
 	cfg.Tunnels = nil
 
-	for i := 0; i < tunnels.Count(); i++ {
-		tun := tunnels.Get(i)
+	for i := 0; i < Count(); i++ {
+		tun := GetIndex(i)
 		if tun == nil {
 			continue
 		}
