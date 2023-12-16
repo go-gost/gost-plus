@@ -97,32 +97,34 @@ func Delete(id string) {
 }
 
 func LoadConfig() {
-	for _, ep := range config.Global().EntryPoints {
+	for _, cfg := range config.Global().EntryPoints {
+		if cfg == nil {
+			continue
+		}
+
+		ep := createEntryPoint(cfg.Type, tunnel.Options{
+			ID:        cfg.ID,
+			Name:      cfg.Name,
+			Endpoint:  cfg.Endpoint,
+			Hostname:  cfg.Hostname,
+			Username:  cfg.Username,
+			Password:  cfg.Password,
+			EnableTLS: cfg.EnableTLS,
+			Keepalive: cfg.Keepalive,
+			TTL:       cfg.TTL,
+		})
 		if ep == nil {
 			continue
 		}
 
-		s := createEntryPoint(ep.Type, tunnel.Options{
-			ID:        ep.ID,
-			Name:      ep.Name,
-			Endpoint:  ep.Endpoint,
-			Hostname:  ep.Hostname,
-			Username:  ep.Username,
-			Password:  ep.Password,
-			EnableTLS: ep.EnableTLS,
-		})
-		if s == nil {
-			continue
-		}
-
-		if ep.Closed {
-			s.Close()
+		if cfg.Closed {
+			ep.Close()
 		} else {
-			s.Run()
+			ep.Run()
 		}
 
-		s.Favorite(ep.Favorite)
-		Add(s)
+		ep.Favorite(cfg.Favorite)
+		Add(ep)
 	}
 }
 
@@ -174,8 +176,8 @@ func createEntryPoint(st string, opts tunnel.Options) EntryPoint {
 	switch st {
 	case TCPEntryPoint:
 		return NewTCPEntryPoint(options...)
-	// case UDPEntryPoint:
-	// return NewU(options...)
+	case UDPEntryPoint:
+		return NewUDPEntryPoint(options...)
 	default:
 		return nil
 	}

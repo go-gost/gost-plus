@@ -117,6 +117,8 @@ func (p *entryPointPage) Layout(gtx C, th *material.Theme) D {
 						switch s.Type() {
 						case entrypoint.TCPEntryPoint:
 							p.router.SwitchTo(Route{Path: PageEditTCPEntryPoint, ID: s.ID()})
+						case entrypoint.UDPEntryPoint:
+							p.router.SwitchTo(Route{Path: PageEditUDPEntryPoint, ID: s.ID()})
 						}
 						op.InvalidateOp{}.Add(gtx.Ops)
 					}

@@ -47,8 +47,8 @@ func NewUDPAddPage(r *Router) Page {
 }
 
 func (p *udpAddPage) Init(opts ...PageOption) {
-	p.name.SetText("")
-	p.addr.SetText("")
+	p.name.Clear()
+	p.addr.Clear()
 
 	p.router.bar.SetActions(
 		[]component.AppBarAction{
@@ -226,7 +226,12 @@ func (p *udpEditPage) Init(opts ...PageOption) {
 				s := tunnel.Get(p.id)
 				if p.wgState.Clicked(gtx) && s != nil {
 					if s.IsClosed() {
-						s = p.createTunnel()
+						opts := s.Options()
+						s = p.createTunnel(
+							tunnel.NameOption(opts.Name),
+							tunnel.IDOption(opts.ID),
+							tunnel.EndpointOption(opts.Endpoint),
+						)
 					} else {
 						s.Close()
 					}
@@ -279,12 +284,15 @@ func (p *udpEditPage) Init(opts ...PageOption) {
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *udpEditPage) createTunnel() tunnel.Tunnel {
-	tun := tunnel.NewUDPTunnel(
-		tunnel.IDOption(p.id),
-		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
-		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
-	)
+func (p *udpEditPage) createTunnel(opts ...tunnel.Option) tunnel.Tunnel {
+	if opts == nil {
+		opts = []tunnel.Option{
+			tunnel.IDOption(p.id),
+			tunnel.NameOption(strings.TrimSpace(p.name.Text())),
+			tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
+		}
+	}
+	tun := tunnel.NewUDPTunnel(opts...)
 
 	tunnel.Set(tun)
 

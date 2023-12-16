@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-gost/core/chain"
 	"github.com/go-gost/core/handler"
@@ -17,7 +18,7 @@ import (
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
 	"github.com/go-gost/x/handler/forward/local"
 	"github.com/go-gost/x/hop"
-	"github.com/go-gost/x/listener/tcp"
+	"github.com/go-gost/x/listener/udp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
 	"github.com/google/uuid"
@@ -108,6 +109,10 @@ func (s *udpEntryPoint) init() error {
 		},
 		Listener: &config.ListenerConfig{
 			Type: "udp",
+			Metadata: map[string]any{
+				"keepalive": s.opts.Keepalive,
+				"ttl":       time.Duration(s.opts.TTL) * time.Second,
+			},
 		},
 		Forwarder: &config.ForwarderConfig{
 			Nodes: []*config.ForwardNodeConfig{
@@ -153,7 +158,7 @@ func (s *udpEntryPoint) Run() (err error) {
 		}
 
 		cfg := s.config.Services[0]
-		ln := tcp.NewListener(
+		ln := udp.NewListener(
 			listener.AddrOption(cfg.Addr),
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "udp"})),
 		)

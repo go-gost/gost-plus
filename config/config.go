@@ -101,6 +101,8 @@ type Tunnel struct {
 	Username  string `yaml:",omitempty"`
 	Password  string `yaml:",omitempty"`
 	EnableTLS bool   `yaml:"enableTLS,omitempty"`
+	Keepalive bool   `yaml:",omitempty"`
+	TTL       int    `yaml:"ttl,omitempty"`
 
 	Favorite bool
 	Closed   bool

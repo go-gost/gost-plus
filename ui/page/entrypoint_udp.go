@@ -5,7 +5,9 @@ import (
 	"image/color"
 	"log"
 	"net"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -18,7 +20,7 @@ import (
 	"golang.org/x/exp/shiny/materialdesign/colornames"
 )
 
-type tcpEntryPointAddPage struct {
+type udpEntryPointAddPage struct {
 	router *Router
 
 	list   layout.List
@@ -27,10 +29,13 @@ type tcpEntryPointAddPage struct {
 	name     component.TextField
 	tunnelID component.TextField
 	addr     component.TextField
+
+	bKeepalive widget.Bool
+	ttl        component.TextField
 }
 
-func NewTCPEntryPointAddPage(r *Router) Page {
-	return &tcpEntryPointAddPage{
+func NewUDPEntryPointAddPage(r *Router) Page {
+	return &udpEntryPointAddPage{
 		router: r,
 		list: layout.List{
 			Axis:      layout.Vertical,
@@ -51,13 +56,20 @@ func NewTCPEntryPointAddPage(r *Router) Page {
 				SingleLine: true,
 			},
 		},
+		ttl: component.TextField{
+			Editor: widget.Editor{
+				SingleLine: true,
+			},
+		},
 	}
 }
 
-func (p *tcpEntryPointAddPage) Init(opts ...PageOption) {
-	p.name.Clear()
-	p.tunnelID.Clear()
-	p.addr.Clear()
+func (p *udpEntryPointAddPage) Init(opts ...PageOption) {
+	p.name.SetText("")
+	p.tunnelID.SetText("")
+	p.addr.SetText("")
+	p.bKeepalive.Value = false
+	p.ttl.SetText("")
 
 	p.router.bar.SetActions(
 		[]component.AppBarAction{
@@ -80,11 +92,11 @@ func (p *tcpEntryPointAddPage) Init(opts ...PageOption) {
 			},
 		}, nil)
 
-	p.router.bar.Title = "TCP"
+	p.router.bar.Title = "UDP"
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *tcpEntryPointAddPage) isValid() bool {
+func (p *udpEntryPointAddPage) isValid() bool {
 	if p.tunnelID.Text() == "" || p.tunnelID.IsErrored() ||
 		p.addr.Text() == "" || p.addr.IsErrored() {
 		return false
@@ -92,7 +104,7 @@ func (p *tcpEntryPointAddPage) isValid() bool {
 	return true
 }
 
-func (p *tcpEntryPointAddPage) Layout(gtx C, th *material.Theme) D {
+func (p *udpEntryPointAddPage) Layout(gtx C, th *material.Theme) D {
 	return p.list.Layout(gtx, 1, func(gtx C, _ int) D {
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
@@ -106,11 +118,11 @@ func (p *tcpEntryPointAddPage) Layout(gtx C, th *material.Theme) D {
 	})
 }
 
-func (p *tcpEntryPointAddPage) layout(gtx C, th *material.Theme) D {
+func (p *udpEntryPointAddPage) layout(gtx C, th *material.Theme) D {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
-		layout.Rigid(material.Body1(th, "Create an entrypoint to the specified TCP tunnel").Layout),
+		layout.Rigid(material.Body1(th, "Create an entrypoint to the specified UDP tunnel").Layout),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
 		layout.Rigid(func(gtx C) D {
 			return material.Body1(th, "Entrypoint name").Layout(gtx)
@@ -131,7 +143,6 @@ func (p *tcpEntryPointAddPage) layout(gtx C, th *material.Theme) D {
 				if _, err := uuid.Parse(tid); err != nil {
 					return fmt.Errorf("invalid tunnel ID, should be a valid UUID")
 				}
-
 				if ep := entrypoint.Get(tid); ep != nil {
 					return fmt.Errorf("the entrypoint for this tunnel exists")
 				}
@@ -154,7 +165,7 @@ func (p *tcpEntryPointAddPage) layout(gtx C, th *material.Theme) D {
 				if addr == "" {
 					return nil
 				}
-				if _, err := net.ResolveTCPAddr("tcp", addr); err != nil {
+				if _, err := net.ResolveUDPAddr("udp", addr); err != nil {
 					return fmt.Errorf("invalid address format, should be [IP]:PORT or [HOST]:PORT")
 				}
 				return nil
@@ -166,14 +177,51 @@ func (p *tcpEntryPointAddPage) layout(gtx C, th *material.Theme) D {
 
 			return p.addr.Layout(gtx, th, "Address")
 		}),
+		layout.Rigid(layout.Spacer{Height: 10}.Layout),
+		layout.Rigid(func(gtx C) D {
+			return layout.Inset{Top: 10, Bottom: 10}.Layout(gtx, func(gtx C) D {
+				return layout.Flex{
+					Spacing: layout.SpaceBetween,
+				}.Layout(gtx,
+					layout.Flexed(1, material.Body1(th, "Enable keepalive").Layout),
+					layout.Rigid(material.Switch(th, &p.bKeepalive, "keepalive").Layout),
+				)
+			})
+		}),
+		layout.Rigid(func(gtx C) D {
+			if !p.bKeepalive.Value {
+				p.ttl.Clear()
+				return layout.Dimensions{}
+			}
+			p.ttl.Suffix = func(gtx C) D {
+				return material.Label(th, th.TextSize, "s").Layout(gtx)
+			}
+
+			if err := func() string {
+				for _, r := range p.ttl.Text() {
+					if !unicode.IsDigit(r) {
+						return "Must contain only digits"
+					}
+				}
+				return ""
+			}(); err != "" {
+				p.ttl.SetError(err)
+			} else {
+				p.ttl.ClearError()
+			}
+			return p.ttl.Layout(gtx, th, "TTL")
+		}),
 	)
 }
 
-func (p *tcpEntryPointAddPage) createEntryPoint() error {
-	ep := entrypoint.NewTCPEntryPoint(
+func (p *udpEntryPointAddPage) createEntryPoint() error {
+	ttl, _ := strconv.Atoi(strings.TrimSpace(p.ttl.Text()))
+	ep := entrypoint.NewUDPEntryPoint(
 		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
 		tunnel.IDOption(strings.ToLower(strings.TrimSpace(p.tunnelID.Text()))),
 		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
+		tunnel.KeepaliveOption(p.bKeepalive.Value),
+		tunnel.TTLOption(ttl),
 	)
 
 	entrypoint.Add(ep)
@@ -185,7 +233,7 @@ func (p *tcpEntryPointAddPage) createEntryPoint() error {
 	return nil
 }
 
-type tcpEntryPointEditPage struct {
+type udpEntryPointEditPage struct {
 	router *Router
 
 	id string
@@ -199,10 +247,13 @@ type tcpEntryPointEditPage struct {
 	name     component.TextField
 	tunnelID component.TextField
 	addr     component.TextField
+
+	bKeepalive widget.Bool
+	ttl        component.TextField
 }
 
-func NewTCPEntryPointEditPage(r *Router) Page {
-	return &tcpEntryPointEditPage{
+func NewUDPEntryPointEditPage(r *Router) Page {
+	return &udpEntryPointEditPage{
 		router: r,
 		list: layout.List{
 			Axis:      layout.Vertical,
@@ -224,10 +275,15 @@ func NewTCPEntryPointEditPage(r *Router) Page {
 				SingleLine: true,
 			},
 		},
+		ttl: component.TextField{
+			Editor: widget.Editor{
+				SingleLine: true,
+			},
+		},
 	}
 }
 
-func (p *tcpEntryPointEditPage) Init(opts ...PageOption) {
+func (p *udpEntryPointEditPage) Init(opts ...PageOption) {
 	var options PageOptions
 	for _, opt := range opts {
 		opt(&options)
@@ -241,6 +297,8 @@ func (p *tcpEntryPointEditPage) Init(opts ...PageOption) {
 		p.name.SetText(sopts.Name)
 		p.tunnelID.SetText(sopts.ID)
 		p.addr.SetText(sopts.Endpoint)
+		p.bKeepalive.Value = sopts.Keepalive
+		p.ttl.SetText(strconv.Itoa(sopts.TTL))
 	}
 
 	actions := []component.AppBarAction{
@@ -283,6 +341,8 @@ func (p *tcpEntryPointEditPage) Init(opts ...PageOption) {
 							tunnel.NameOption(opts.Name),
 							tunnel.IDOption(opts.ID),
 							tunnel.EndpointOption(opts.Endpoint),
+							tunnel.KeepaliveOption(opts.Keepalive),
+							tunnel.TTLOption(opts.TTL),
 						)
 					} else {
 						s.Close()
@@ -335,11 +395,11 @@ func (p *tcpEntryPointEditPage) Init(opts ...PageOption) {
 		},
 	}
 	p.router.bar.SetActions(actions, nil)
-	p.router.bar.Title = "TCP"
+	p.router.bar.Title = "UDP"
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *tcpEntryPointEditPage) isValid() bool {
+func (p *udpEntryPointEditPage) isValid() bool {
 	if p.tunnelID.Text() == "" || p.tunnelID.IsErrored() ||
 		p.addr.Text() == "" || p.addr.IsErrored() {
 		return false
@@ -347,15 +407,18 @@ func (p *tcpEntryPointEditPage) isValid() bool {
 	return true
 }
 
-func (p *tcpEntryPointEditPage) createEntryPoint(opts ...tunnel.Option) entrypoint.EntryPoint {
+func (p *udpEntryPointEditPage) createEntryPoint(opts ...tunnel.Option) entrypoint.EntryPoint {
 	if opts == nil {
+		ttl, _ := strconv.Atoi(strings.TrimSpace(p.ttl.Text()))
 		opts = []tunnel.Option{
 			tunnel.NameOption(strings.TrimSpace(p.name.Text())),
 			tunnel.IDOption(p.id),
 			tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
+			tunnel.KeepaliveOption(p.bKeepalive.Value),
+			tunnel.TTLOption(ttl),
 		}
 	}
-	ep := entrypoint.NewTCPEntryPoint(opts...)
+	ep := entrypoint.NewUDPEntryPoint(opts...)
 
 	entrypoint.Set(ep)
 
@@ -366,7 +429,7 @@ func (p *tcpEntryPointEditPage) createEntryPoint(opts ...tunnel.Option) entrypoi
 	return ep
 }
 
-func (p *tcpEntryPointEditPage) Layout(gtx C, th *material.Theme) D {
+func (p *udpEntryPointEditPage) Layout(gtx C, th *material.Theme) D {
 	return p.list.Layout(gtx, 1, func(gtx C, _ int) D {
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
@@ -380,7 +443,7 @@ func (p *tcpEntryPointEditPage) Layout(gtx C, th *material.Theme) D {
 	})
 }
 
-func (p *tcpEntryPointEditPage) layout(gtx C, th *material.Theme) D {
+func (p *udpEntryPointEditPage) layout(gtx C, th *material.Theme) D {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
@@ -433,6 +496,40 @@ func (p *tcpEntryPointEditPage) layout(gtx C, th *material.Theme) D {
 			}
 
 			return p.addr.Layout(gtx, th, "Address")
+		}),
+		layout.Rigid(layout.Spacer{Height: 10}.Layout),
+		layout.Rigid(func(gtx C) D {
+			return layout.Inset{Top: 10, Bottom: 10}.Layout(gtx, func(gtx C) D {
+				return layout.Flex{
+					Spacing: layout.SpaceBetween,
+				}.Layout(gtx,
+					layout.Flexed(1, material.Body1(th, "Enable keepalive").Layout),
+					layout.Rigid(material.Switch(th, &p.bKeepalive, "keepalive").Layout),
+				)
+			})
+		}),
+		layout.Rigid(func(gtx C) D {
+			if !p.bKeepalive.Value {
+				p.ttl.Clear()
+				return layout.Dimensions{}
+			}
+			p.ttl.Suffix = func(gtx C) D {
+				return material.Label(th, th.TextSize, "s").Layout(gtx)
+			}
+
+			if err := func() string {
+				for _, r := range p.ttl.Text() {
+					if !unicode.IsDigit(r) {
+						return "Must contain only digits"
+					}
+				}
+				return ""
+			}(); err != "" {
+				p.ttl.SetError(err)
+			} else {
+				p.ttl.ClearError()
+			}
+			return p.ttl.Layout(gtx, th, "TTL")
 		}),
 	)
 }

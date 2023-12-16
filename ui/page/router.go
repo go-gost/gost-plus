@@ -44,8 +44,10 @@ func NewRouter() *Router {
 	r.Register(PageEditUDP, NewUDPEditPage(r))
 
 	r.Register(PageEntryPoint, NewEntryPointPage(r))
-	r.Register(PageEditTCPEntryPoint, NewTCPEntryPointEditPage(r))
 	r.Register(PageNewTCPEntryPoint, NewTCPEntryPointAddPage(r))
+	r.Register(PageEditTCPEntryPoint, NewTCPEntryPointEditPage(r))
+	r.Register(PageNewUDPEntryPoint, NewUDPEntryPointAddPage(r))
+	r.Register(PageEditUDPEntryPoint, NewUDPEntryPointEditPage(r))
 
 	r.Register(PageAbout, NewAboutPage(r))
 
@@ -75,8 +77,11 @@ func (r *Router) Layout(gtx layout.Context, th *material.Theme) layout.Dimension
 	for _, event := range r.bar.Events(gtx) {
 		switch event := event.(type) {
 		case component.AppBarNavigationClicked:
+			path := r.current.Path
 			// log.Printf("navigation clicked: %+v", event)
-			if r.current.Path == PageTunnel {
+			if path == PageTunnel ||
+				path == PageNewTCPEntryPoint || path == PageEditTCPEntryPoint ||
+				path == PageNewUDPEntryPoint || path == PageEditUDPEntryPoint {
 				r.SwitchTo(Route{Path: PageEntryPoint})
 			} else {
 				r.SwitchTo(Route{Path: PageTunnel})

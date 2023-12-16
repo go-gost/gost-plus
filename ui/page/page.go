@@ -28,6 +28,8 @@ const (
 	PageEntryPoint        = "/entrypoint"
 	PageNewTCPEntryPoint  = "/entrypoint/tcp/create"
 	PageEditTCPEntryPoint = "/entrypoint/tcp/edit"
+	PageNewUDPEntryPoint  = "/entrypoint/udp/create"
+	PageEditUDPEntryPoint = "/entrypoint/udp/edit"
 
 	PageAbout = "/about"
 )

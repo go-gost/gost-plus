@@ -36,6 +36,8 @@ type Options struct {
 	Username  string
 	Password  string
 	EnableTLS bool
+	Keepalive bool
+	TTL       int
 }
 
 type Option func(opts *Options)
@@ -79,6 +81,18 @@ func PasswordOption(password string) Option {
 func EnableTLSOption(b bool) Option {
 	return func(opts *Options) {
 		opts.EnableTLS = b
+	}
+}
+
+func KeepaliveOption(b bool) Option {
+	return func(opts *Options) {
+		opts.Keepalive = b
+	}
+}
+
+func TTLOption(ttl int) Option {
+	return func(opts *Options) {
+		opts.TTL = ttl
 	}
 }
 

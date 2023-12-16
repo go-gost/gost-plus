@@ -6,7 +6,7 @@ require (
 	gioui.org v0.4.1
 	gioui.org/x v0.4.0
 	github.com/go-gost/core v0.0.0-20231119081403-abc73f2ca2b7
-	github.com/go-gost/x v0.0.0-20231130113937-b1390dda1cc8
+	github.com/go-gost/x v0.0.0-20231216062858-f847fa533e98
 	github.com/google/uuid v1.4.0
 	github.com/spf13/viper v1.18.1
 	golang.org/x/exp/shiny v0.0.0-20231206192017-f3f8817b8deb

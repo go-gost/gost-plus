@@ -33,6 +33,9 @@ type httpAddPage struct {
 	password   component.TextField
 
 	bTLS widget.Bool
+
+	wgPassword      widget.Clickable
+	passwordVisible bool
 }
 
 func NewHTTPAddPage(r *Router) Page {
@@ -71,13 +74,14 @@ func NewHTTPAddPage(r *Router) Page {
 }
 
 func (p *httpAddPage) Init(opts ...PageOption) {
-	p.name.SetText("")
-	p.addr.SetText("")
-	p.hostname.SetText("")
+	p.name.Clear()
+	p.addr.Clear()
+	p.hostname.Clear()
 	p.bBasicAuth.Value = false
-	p.username.SetText("")
-	p.password.SetText("")
+	p.username.Clear()
+	p.password.Clear()
 	p.bTLS.Value = false
+	p.passwordVisible = false
 
 	p.router.bar.SetActions(
 		[]component.AppBarAction{
@@ -186,6 +190,27 @@ func (p *httpAddPage) layout(gtx C, th *material.Theme) D {
 				p.password.SetText("")
 				return layout.Dimensions{}
 			}
+
+			if p.wgPassword.Clicked(gtx) {
+				p.passwordVisible = !p.passwordVisible
+			}
+
+			if p.passwordVisible {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibility.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = 0
+			} else {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibilityOff.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = '*'
+			}
+
 			return p.password.Layout(gtx, th, "Password")
 		}),
 		layout.Rigid(layout.Spacer{Height: 10}.Layout),
@@ -254,6 +279,9 @@ type httpEditPage struct {
 
 	wgID         widget.Clickable
 	wgEntrypoint widget.Clickable
+
+	wgPassword      widget.Clickable
+	passwordVisible bool
 }
 
 func NewHTTPEditPage(r *Router) Page {
@@ -292,6 +320,8 @@ func NewHTTPEditPage(r *Router) Page {
 }
 
 func (p *httpEditPage) Init(opts ...PageOption) {
+	p.passwordVisible = false
+
 	var options PageOptions
 	for _, opt := range opts {
 		opt(&options)
@@ -350,7 +380,16 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 				s := tunnel.Get(p.id)
 				if p.wgState.Clicked(gtx) && s != nil {
 					if s.IsClosed() {
-						s = p.createTunnel()
+						opts := s.Options()
+						s = p.createTunnel(
+							tunnel.NameOption(opts.Name),
+							tunnel.IDOption(opts.ID),
+							tunnel.EndpointOption(opts.Endpoint),
+							tunnel.HostnameOption(opts.Hostname),
+							tunnel.UsernameOption(opts.Username),
+							tunnel.PasswordOption(opts.Password),
+							tunnel.EnableTLSOption(opts.EnableTLS),
+						)
 					} else {
 						s.Close()
 					}
@@ -402,25 +441,29 @@ func (p *httpEditPage) Init(opts ...PageOption) {
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *httpEditPage) createTunnel() tunnel.Tunnel {
-	var username, password string
-	if p.cbBasicAuth.Value {
-		username = strings.TrimSpace(p.username.Text())
-		password = strings.TrimSpace(p.password.Text())
+func (p *httpEditPage) createTunnel(opts ...tunnel.Option) tunnel.Tunnel {
+	if opts == nil {
+		var username, password string
+		if p.cbBasicAuth.Value {
+			username = strings.TrimSpace(p.username.Text())
+			password = strings.TrimSpace(p.password.Text())
+		}
+		var hostname string
+		if p.bHost.Value {
+			hostname = strings.TrimSpace(p.hostname.Text())
+		}
+
+		opts = []tunnel.Option{
+			tunnel.NameOption(strings.TrimSpace(p.name.Text())),
+			tunnel.IDOption(p.id),
+			tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
+			tunnel.UsernameOption(username),
+			tunnel.PasswordOption(password),
+			tunnel.HostnameOption(hostname),
+			tunnel.EnableTLSOption(p.bTLS.Value),
+		}
 	}
-	var hostname string
-	if p.bHost.Value {
-		hostname = strings.TrimSpace(p.hostname.Text())
-	}
-	tun := tunnel.NewHTTPTunnel(
-		tunnel.IDOption(p.id),
-		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
-		tunnel.EndpointOption(strings.TrimSpace(p.addr.Text())),
-		tunnel.UsernameOption(username),
-		tunnel.PasswordOption(password),
-		tunnel.HostnameOption(hostname),
-		tunnel.EnableTLSOption(p.bTLS.Value),
-	)
+	tun := tunnel.NewHTTPTunnel(opts...)
 
 	tunnel.Set(tun)
 
@@ -522,6 +565,27 @@ func (p *httpEditPage) layout(gtx C, th *material.Theme) D {
 				p.password.SetText("")
 				return layout.Dimensions{}
 			}
+
+			if p.wgPassword.Clicked(gtx) {
+				p.passwordVisible = !p.passwordVisible
+			}
+
+			if p.passwordVisible {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibility.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = 0
+			} else {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibilityOff.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = '*'
+			}
+
 			return p.password.Layout(gtx, th, "Password")
 		}),
 		layout.Rigid(func(gtx C) D {

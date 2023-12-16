@@ -35,6 +35,8 @@ github.com/go-gost/tls-dissector v0.0.2-0.20220408131628-aac992c27451 h1:xj8gUZG
 github.com/go-gost/tls-dissector v0.0.2-0.20220408131628-aac992c27451/go.mod h1:/9QfdewqmHdaE362Hv5nDaSWLx3pCmtD870d6GaquXs=
 github.com/go-gost/x v0.0.0-20231130113937-b1390dda1cc8 h1:aM2tAfTg4+oBiB161GrYbRBhUHQM1CYNiDNYsqoVAlE=
 github.com/go-gost/x v0.0.0-20231130113937-b1390dda1cc8/go.mod h1:YaeMQsu+I8Q3bxPFeo5MbnmLsAdbGUxxG3A4mvUt2YE=
+github.com/go-gost/x v0.0.0-20231216062858-f847fa533e98 h1:dFjwqp6SUJhDlFOBeBZXn5b2DqRjdbyBt+6w40+6cR8=
+github.com/go-gost/x v0.0.0-20231216062858-f847fa533e98/go.mod h1:YaeMQsu+I8Q3bxPFeo5MbnmLsAdbGUxxG3A4mvUt2YE=
 github.com/go-redis/redis/v8 v8.11.5 h1:AcZZR7igkdvfVmQTPnu9WE37LRrO/YrBH5zWyjDC0oI=
 github.com/go-redis/redis/v8 v8.11.5/go.mod h1:gREzHqY1hg6oD9ngVRbLStwAWKhA0FEgq8Jd4h5lpwo=
 github.com/go-text/typesetting v0.0.0-20230803102845-24e03d8b5372 h1:FQivqchis6bE2/9uF70M2gmmLpe82esEm2QadL0TEJo=

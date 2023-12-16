@@ -27,6 +27,9 @@ type fileAddPage struct {
 	cbBasicAuth widget.Bool
 	username    component.TextField
 	password    component.TextField
+
+	wgPassword      widget.Clickable
+	passwordVisible bool
 }
 
 func NewFileAddPage(r *Router) Page {
@@ -60,11 +63,12 @@ func NewFileAddPage(r *Router) Page {
 }
 
 func (p *fileAddPage) Init(opts ...PageOption) {
-	p.name.SetText("")
-	p.path.SetText("")
+	p.name.Clear()
+	p.path.Clear()
 	p.cbBasicAuth.Value = false
-	p.username.SetText("")
-	p.password.SetText("")
+	p.username.Clear()
+	p.password.Clear()
+	p.passwordVisible = false
 
 	p.router.bar.SetActions(
 		[]component.AppBarAction{
@@ -158,15 +162,35 @@ func (p *fileAddPage) layout(gtx C, th *material.Theme) D {
 		}),
 		layout.Rigid(func(gtx C) D {
 			if !p.cbBasicAuth.Value {
-				p.username.SetText("")
+				p.username.Clear()
 				return layout.Dimensions{}
 			}
 			return p.username.Layout(gtx, th, "Username")
 		}),
 		layout.Rigid(func(gtx C) D {
 			if !p.cbBasicAuth.Value {
-				p.password.SetText("")
+				p.password.Clear()
 				return layout.Dimensions{}
+			}
+
+			if p.wgPassword.Clicked(gtx) {
+				p.passwordVisible = !p.passwordVisible
+			}
+
+			if p.passwordVisible {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibility.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = 0
+			} else {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibilityOff.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = '*'
 			}
 			return p.password.Layout(gtx, th, "Password")
 		}),
@@ -215,6 +239,9 @@ type fileEditPage struct {
 	cbBasicAuth widget.Bool
 	username    component.TextField
 	password    component.TextField
+
+	wgPassword      widget.Clickable
+	passwordVisible bool
 }
 
 func NewFileEditPage(r *Router) Page {
@@ -248,6 +275,8 @@ func NewFileEditPage(r *Router) Page {
 }
 
 func (p *fileEditPage) Init(opts ...PageOption) {
+	p.passwordVisible = false
+
 	var options PageOptions
 	for _, opt := range opts {
 		opt(&options)
@@ -305,7 +334,14 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 
 				if p.wgState.Clicked(gtx) {
 					if s.IsClosed() {
-						s = p.createTunnel()
+						opts := s.Options()
+						s = p.createTunnel(
+							tunnel.NameOption(opts.Name),
+							tunnel.IDOption(opts.ID),
+							tunnel.EndpointOption(opts.Endpoint),
+							tunnel.UsernameOption(opts.Username),
+							tunnel.PasswordOption(opts.Password),
+						)
 					} else {
 						s.Close()
 					}
@@ -357,19 +393,22 @@ func (p *fileEditPage) Init(opts ...PageOption) {
 	p.router.bar.NavigationIcon = icons.IconClose
 }
 
-func (p *fileEditPage) createTunnel() tunnel.Tunnel {
-	var username, password string
-	if p.cbBasicAuth.Value {
-		username = strings.TrimSpace(p.username.Text())
-		password = strings.TrimSpace(p.password.Text())
+func (p *fileEditPage) createTunnel(opts ...tunnel.Option) tunnel.Tunnel {
+	if opts == nil {
+		var username, password string
+		if p.cbBasicAuth.Value {
+			username = strings.TrimSpace(p.username.Text())
+			password = strings.TrimSpace(p.password.Text())
+		}
+		opts = []tunnel.Option{
+			tunnel.NameOption(strings.TrimSpace(p.name.Text())),
+			tunnel.IDOption(p.id),
+			tunnel.EndpointOption(strings.TrimSpace(p.path.Text())),
+			tunnel.UsernameOption(username),
+			tunnel.PasswordOption(password),
+		}
 	}
-	tun := tunnel.NewFileTunnel(
-		tunnel.IDOption(p.id),
-		tunnel.NameOption(strings.TrimSpace(p.name.Text())),
-		tunnel.EndpointOption(strings.TrimSpace(p.path.Text())),
-		tunnel.UsernameOption(username),
-		tunnel.PasswordOption(password),
-	)
+	tun := tunnel.NewFileTunnel(opts...)
 
 	tunnel.Set(tun)
 
@@ -455,16 +494,37 @@ func (p *fileEditPage) layout(gtx C, th *material.Theme) D {
 		}),
 		layout.Rigid(func(gtx C) D {
 			if !p.cbBasicAuth.Value {
-				p.username.SetText("")
+				p.username.Clear()
 				return layout.Dimensions{}
 			}
 			return p.username.Layout(gtx, th, "Username")
 		}),
 		layout.Rigid(func(gtx C) D {
 			if !p.cbBasicAuth.Value {
-				p.password.SetText("")
+				p.password.Clear()
 				return layout.Dimensions{}
 			}
+
+			if p.wgPassword.Clicked(gtx) {
+				p.passwordVisible = !p.passwordVisible
+			}
+
+			if p.passwordVisible {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibility.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = 0
+			} else {
+				p.password.Suffix = func(gtx layout.Context) layout.Dimensions {
+					return p.wgPassword.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return icons.IconVisibilityOff.Layout(gtx, color.NRGBA(colornames.Grey500))
+					})
+				}
+				p.password.Mask = '*'
+			}
+
 			return p.password.Layout(gtx, th, "Password")
 		}),
 	)

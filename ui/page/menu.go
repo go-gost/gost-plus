@@ -66,6 +66,10 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 			p.router.SwitchTo(Route{Path: PageNewTCPEntryPoint})
 			return true
 		}
+		if p.wgEntryPointUDP.Clicked(gtx) {
+			p.router.SwitchTo(Route{Path: PageNewUDPEntryPoint})
+			return true
+		}
 
 		return false
 	}(); clicked {
@@ -138,7 +142,18 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
 								return p.wgEntryPointTCP.Layout(gtx, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
-										return p.layoutCard(gtx, th, "TCP", "Create an entrypoint to connect to the specified TCP tunnel")
+										return p.layoutCard(gtx, th, "TCP", "Create an entrypoint to the specified TCP tunnel")
+									})
+								})
+							})
+						})
+					}),
+					layout.Rigid(func(gtx C) D {
+						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
+							return component.Surface(th).Layout(gtx, func(gtx C) D {
+								return p.wgEntryPointUDP.Layout(gtx, func(gtx C) D {
+									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
+										return p.layoutCard(gtx, th, "UDP", "Create an entrypoint to the specified UDP tunnel")
 									})
 								})
 							})
