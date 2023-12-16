@@ -90,7 +90,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
-								return p.wgFile.Layout(gtx, func(gtx C) D {
+								return material.Clickable(gtx, &p.wgFile, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 										return p.layoutCard(gtx, th, "File", "Expose local files to public network")
 									})
@@ -101,7 +101,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
-								return p.wgHTTP.Layout(gtx, func(gtx C) D {
+								return material.Clickable(gtx, &p.wgHTTP, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 										return p.layoutCard(gtx, th, "HTTP", "Expose local HTTP service to public network")
 									})
@@ -112,7 +112,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
-								return p.wgTCP.Layout(gtx, func(gtx C) D {
+								return material.Clickable(gtx, &p.wgTCP, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 										return p.layoutCard(gtx, th, "TCP", "Expose local TCP service to public network")
 									})
@@ -123,7 +123,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
-								return p.wgUDP.Layout(gtx, func(gtx C) D {
+								return material.Clickable(gtx, &p.wgUDP, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 										return p.layoutCard(gtx, th, "UDP", "Expose local UDP service to public network")
 									})
@@ -140,7 +140,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
-								return p.wgEntryPointTCP.Layout(gtx, func(gtx C) D {
+								return material.Clickable(gtx, &p.wgEntryPointTCP, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 										return p.layoutCard(gtx, th, "TCP", "Create an entrypoint to the specified TCP tunnel")
 									})
@@ -151,7 +151,7 @@ func (p *menuPage) Layout(gtx C, th *material.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Top: 5, Bottom: 5}.Layout(gtx, func(gtx C) D {
 							return component.Surface(th).Layout(gtx, func(gtx C) D {
-								return p.wgEntryPointUDP.Layout(gtx, func(gtx C) D {
+								return material.Clickable(gtx, &p.wgEntryPointUDP, func(gtx C) D {
 									return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 										return p.layoutCard(gtx, th, "UDP", "Create an entrypoint to the specified UDP tunnel")
 									})

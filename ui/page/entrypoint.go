@@ -122,7 +122,7 @@ func (p *entryPointPage) Layout(gtx C, th *material.Theme) D {
 						}
 						op.InvalidateOp{}.Add(gtx.Ops)
 					}
-					return state.editor.Layout(gtx, func(gtx C) D {
+					return material.Clickable(gtx, &state.editor, func(gtx C) D {
 						return layout.UniformInset(10).Layout(gtx, func(gtx C) D {
 							return p.layout(gtx, th, s)
 						})
