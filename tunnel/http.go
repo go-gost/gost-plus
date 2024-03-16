@@ -188,15 +188,15 @@ func (s *httpTunnel) Run() (err error) {
 
 		node := cfg.Forwarder.Nodes[0]
 		var nodeOpts []chain.NodeOption
-		if node.Auth != nil {
-			auther := xauth.NewAuthenticator(xauth.AuthsOption(map[string]string{node.Auth.Username: node.Auth.Password}))
-			nodeOpts = append(nodeOpts, chain.AutherNodeOption(auther))
-		}
 		if node.HTTP != nil {
-			nodeOpts = append(nodeOpts, chain.HTTPNodeOption(&chain.HTTPNodeSettings{
+			httpNodeSettings := &chain.HTTPNodeSettings{
 				Host:   node.HTTP.Host,
 				Header: node.HTTP.Header,
-			}))
+			}
+			if node.HTTP.Auth != nil {
+				httpNodeSettings.Auther = xauth.NewAuthenticator(xauth.AuthsOption(map[string]string{node.HTTP.Auth.Username: node.HTTP.Auth.Password}))
+			}
+			nodeOpts = append(nodeOpts, chain.HTTPNodeOption(httpNodeSettings))
 		}
 		if node.TLS != nil {
 			nodeOpts = append(nodeOpts, chain.TLSNodeOption(&chain.TLSNodeSettings{
@@ -216,6 +216,13 @@ func (s *httpTunnel) Run() (err error) {
 		s.setErr(s.forward.Serve())
 	}()
 
+	return nil
+}
+
+func (s *httpTunnel) Status() *xservice.Status {
+	if ss, _ := s.forward.(ServiceStatus); ss != nil {
+		return ss.Status()
+	}
 	return nil
 }
 

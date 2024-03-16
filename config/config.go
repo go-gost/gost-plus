@@ -2,14 +2,15 @@ package config
 
 import (
 	"bytes"
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"sync"
+	"sync/atomic"
+	"time"
 
 	"gioui.org/app"
 	"github.com/go-gost/core/logger"
-	"github.com/go-gost/x/config"
 	xconfig "github.com/go-gost/x/config"
 	logger_parser "github.com/go-gost/x/config/parsing/logger"
 	"gopkg.in/yaml.v3"
@@ -23,12 +24,16 @@ var (
 	configDir string
 )
 
+func init() {
+	config.Store(&Config{})
+}
+
 func Init() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags | log.Lmicroseconds)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{AddSource: true})))
 
 	dir, err := app.DataDir()
 	if err != nil {
-		log.Println(err)
+		slog.Error(fmt.Sprintf("appDir: %v", err))
 	}
 	if dir == "" {
 		dir, _ = os.Getwd()
@@ -36,55 +41,49 @@ func Init() {
 	configDir = filepath.Join(dir, "gost.plus")
 	os.MkdirAll(configDir, 0755)
 
-	log.Println("config dir:", configDir)
+	slog.Info(fmt.Sprintf("appDir: %s", configDir))
 
-	if err := global.Load(); err != nil {
-		log.Println(err)
+	cfg := Get()
+	if err := cfg.load(); err != nil {
+		slog.Error(fmt.Sprintf("load config: %v", err))
 		if _, ok := err.(*os.PathError); ok {
-			global.Write()
+			cfg.Write()
 		}
 	}
-	if global.Log == nil {
-		logDir := filepath.Join(configDir, "logs")
-		os.MkdirAll(logDir, 0755)
-		log.Println("log dir:", logDir)
+	Set(cfg)
 
-		global.Log = &xconfig.LogConfig{
-			Output: filepath.Join(logDir, "gost-plus.log"),
+	initLog()
+}
+
+func initLog() {
+	cfg := Get().Log
+	if cfg == nil {
+		cfg = &xconfig.LogConfig{
+			Output: "stdout",
 			Level:  string(logger.InfoLevel),
 			Format: string(logger.JSONFormat),
-			Rotation: &xconfig.LogRotationConfig{
-				MaxSize:    10,
-				MaxAge:     7,
-				MaxBackups: 10,
-				LocalTime:  true,
-				Compress:   true,
-			},
 		}
 	}
 
-	logger.SetDefault(logger_parser.ParseLogger(&xconfig.LoggerConfig{Log: global.Log}))
+	logger.SetDefault(logger_parser.ParseLogger(&xconfig.LoggerConfig{Log: cfg}))
 }
 
 var (
-	global    = &Config{}
-	globalMux sync.RWMutex
+	config atomic.Value
 )
 
-func Global() *Config {
-	globalMux.RLock()
-	defer globalMux.RUnlock()
-
+func Get() *Config {
+	c := config.Load().(*Config)
 	cfg := &Config{}
-	*cfg = *global
+	*cfg = *c
 	return cfg
 }
 
 func Set(c *Config) {
-	globalMux.Lock()
-	defer globalMux.Unlock()
-
-	global = c
+	if c == nil {
+		c = &Config{}
+	}
+	config.Store(c)
 }
 
 type Settings struct {
@@ -104,18 +103,19 @@ type Tunnel struct {
 	Keepalive bool   `yaml:",omitempty"`
 	TTL       int    `yaml:"ttl,omitempty"`
 
-	Favorite bool
-	Closed   bool
+	Favorite  bool
+	Closed    bool
+	CreatedAt time.Time
 }
 
 type Config struct {
 	Settings    *Settings
 	Tunnels     []*Tunnel
 	EntryPoints []*Tunnel
-	Log         *config.LogConfig
+	Log         *xconfig.LogConfig
 }
 
-func (c *Config) Load() error {
+func (c *Config) load() error {
 	f, err := os.Open(filepath.Join(configDir, configFile))
 	if err != nil {
 		return err

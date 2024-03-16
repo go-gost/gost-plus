@@ -1,109 +1,134 @@
 package page
 
 import (
+	"fmt"
+	"log/slog"
+
 	"gioui.org/layout"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
+	"gioui.org/unit"
 	"gioui.org/widget/material"
-	"gioui.org/x/component"
+	"github.com/go-gost/gost.plus/ui/theme"
 )
 
 type C = layout.Context
 type D = layout.Dimensions
 
 type Route struct {
-	Path string
+	Path PagePath
 	ID   string
 }
 
 type Router struct {
-	modal *component.ModalLayer
-	bar   *component.AppBar
-
-	pages   map[string]Page
+	pages   map[PagePath]Page
+	stack   routeStack
 	current Route
+	*material.Theme
 }
 
-func NewRouter() *Router {
-	modal := component.NewModal()
-	bar := component.NewAppBar(modal)
-
+func NewRouter(th *material.Theme) *Router {
 	r := &Router{
-		modal: modal,
-		bar:   bar,
-		pages: make(map[string]Page),
+		pages: make(map[PagePath]Page),
+		Theme: th,
 	}
-
-	r.Register(PageTunnel, NewTunnelPage(r))
-	r.Register(PageMenu, NewMenuPage(r))
-	r.Register(PageNewFile, NewFileAddPage(r))
-	r.Register(PageEditFile, NewFileEditPage(r))
-	r.Register(PageNewHTTP, NewHTTPAddPage(r))
-	r.Register(PageEditHTTP, NewHTTPEditPage(r))
-	r.Register(PageNewTCP, NewTCPAddPage(r))
-	r.Register(PageEditTCP, NewTCPEditPage(r))
-	r.Register(PageNewUDP, NewUDPAddPage(r))
-	r.Register(PageEditUDP, NewUDPEditPage(r))
-
-	r.Register(PageEntryPoint, NewEntryPointPage(r))
-	r.Register(PageNewTCPEntryPoint, NewTCPEntryPointAddPage(r))
-	r.Register(PageEditTCPEntryPoint, NewTCPEntryPointEditPage(r))
-	r.Register(PageNewUDPEntryPoint, NewUDPEntryPointAddPage(r))
-	r.Register(PageEditUDPEntryPoint, NewUDPEntryPointEditPage(r))
-
-	r.Register(PageAbout, NewAboutPage(r))
-
-	r.SwitchTo(Route{Path: PageTunnel})
 
 	return r
 }
 
-func (r *Router) Register(path string, page Page) {
-	if page != nil {
-		r.pages[path] = page
-	}
+func (r *Router) Register(path PagePath, page Page) {
+	r.pages[path] = page
 }
 
-func (r *Router) SwitchTo(route Route) {
-	p := r.pages[route.Path]
-	if p == nil {
+func (r *Router) Goto(route Route) {
+	page := r.pages[route.Path]
+	if page == nil {
 		return
 	}
 
-	p.Init(IDPageOption(route.ID))
-
 	r.current = route
+	r.stack.Push(route)
+
+	page.Init(WithPageID(route.ID))
+	slog.Debug(fmt.Sprintf("go to %s", route.Path), "kind", "router", "route.id", route.ID)
 }
 
-func (r *Router) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	for _, event := range r.bar.Events(gtx) {
-		switch event := event.(type) {
-		case component.AppBarNavigationClicked:
-			path := r.current.Path
-			// log.Printf("navigation clicked: %+v", event)
-			if path == PageTunnel ||
-				path == PageNewTCPEntryPoint || path == PageEditTCPEntryPoint ||
-				path == PageNewUDPEntryPoint || path == PageEditUDPEntryPoint {
-				r.SwitchTo(Route{Path: PageEntryPoint})
-			} else {
-				r.SwitchTo(Route{Path: PageTunnel})
+func (r *Router) Back() {
+	r.stack.Pop()
+	route := r.stack.Peek()
+
+	page := r.pages[route.Path]
+	if page == nil {
+		return
+	}
+	r.current = route
+
+	page.Init(WithPageID(route.ID))
+	slog.Debug(fmt.Sprintf("back to %s", route.Path), "kind", "router", "route.id", route.ID)
+}
+
+func (r *Router) Layout(gtx C) D {
+	r.Theme.Palette = theme.Current().Material
+
+	return layout.Background{}.Layout(gtx,
+		func(gtx C) D {
+			defer clip.Rect{
+				Max: gtx.Constraints.Max,
+			}.Op().Push(gtx.Ops).Pop()
+
+			paint.ColorOp{
+				Color: r.Theme.Bg,
+			}.Add(gtx.Ops)
+			paint.PaintOp{}.Add(gtx.Ops)
+
+			return layout.Dimensions{
+				Size: gtx.Constraints.Max,
 			}
-		case component.AppBarContextMenuDismissed:
-			// log.Printf("Context menu dismissed: %+v", event)
-			r.SwitchTo(Route{Path: PageTunnel})
-		case component.AppBarOverflowActionClicked:
-			if event.Tag == OverflowActionAbout {
-				r.SwitchTo(Route{Path: PageAbout})
+		},
+		func(gtx C) D {
+			page := r.pages[r.current.Path]
+			if page == nil {
+				page = r.pages[PageHome]
 			}
-		}
+
+			inset := layout.Inset{}
+			width := unit.Dp(800)
+			if x := gtx.Metric.PxToDp(gtx.Constraints.Max.X); x > width {
+				inset.Left = (x - width) / 2
+				inset.Right = inset.Left
+			}
+
+			return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return page.Layout(gtx)
+			})
+		},
+	)
+}
+
+type routeStack struct {
+	routes []Route
+}
+
+func (p *routeStack) Push(route Route) {
+	p.routes = append(p.routes, route)
+}
+
+func (p *routeStack) Pop() (route Route) {
+	if len(p.routes) == 0 {
+		return
 	}
 
-	defer r.modal.Layout(gtx, th)
+	n := len(p.routes) - 1
+	route = p.routes[n]
+	p.routes = p.routes[:n]
 
-	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return r.bar.Layout(gtx, th, "Menu", "Actions")
-		}),
-		layout.Flexed(1, func(gtx C) D {
-			return r.pages[r.current.Path].Layout(gtx, th)
-		}),
-	)
+	return
+}
+
+func (p *routeStack) Peek() (route Route) {
+	if len(p.routes) == 0 {
+		return
+	}
+
+	return p.routes[len(p.routes)-1]
 }

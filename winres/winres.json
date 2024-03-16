@@ -13,7 +13,7 @@
           "name": "",
           "version": ""
         },
-        "description": "Simple GUI client for GOST.PLUS",
+        "description": "GUI client for GOST.PLUS",
         "minimum-os": "win7",
         "execution-level": "as invoker",
         "ui-access": false,
@@ -35,22 +35,22 @@
     "#1": {
       "0000": {
         "fixed": {
-          "file_version": "0.2.0.0",
-          "product_version": "0.2.0.0"
+          "file_version": "0.3.0.0",
+          "product_version": "0.3.0.0"
         },
         "info": {
           "0409": {
             "Comments": "",
             "CompanyName": "GOST.PLUS",
-            "FileDescription": "A simple GUI client for GOST.PLUS",
-            "FileVersion": "0.2.0",
+            "FileDescription": "GUI client for GOST.PLUS",
+            "FileVersion": "0.3.0",
             "InternalName": "gost.plus",
             "LegalCopyright": "Copyright © 2024 GOST.PLUS",
             "LegalTrademarks": "GOST.PLUS",
-            "OriginalFilename": "gost-plus",
+            "OriginalFilename": "gost.plus",
             "PrivateBuild": "",
             "ProductName": "GOST.PLUS",
-            "ProductVersion": "0.2.0",
+            "ProductVersion": "0.3.0",
             "SpecialBuild": ""
           }
         }

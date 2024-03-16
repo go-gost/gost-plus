@@ -185,6 +185,13 @@ func (s *tcpTunnel) Run() (err error) {
 	return nil
 }
 
+func (s *tcpTunnel) Status() *xservice.Status {
+	if ss, _ := s.forward.(ServiceStatus); ss != nil {
+		return ss.Status()
+	}
+	return nil
+}
+
 func (s *tcpTunnel) Close() error {
 	defer func() {
 		select {

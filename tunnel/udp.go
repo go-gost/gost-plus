@@ -185,6 +185,13 @@ func (s *udpTunnel) Run() (err error) {
 	return nil
 }
 
+func (s *udpTunnel) Status() *xservice.Status {
+	if ss, _ := s.forward.(ServiceStatus); ss != nil {
+		return ss.Status()
+	}
+	return nil
+}
+
 func (s *udpTunnel) Close() error {
 	defer func() {
 		select {

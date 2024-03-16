@@ -7,23 +7,21 @@ import (
 
 	"gioui.org/app"
 	_ "gioui.org/app/permission/storage"
-	"gioui.org/io/system"
-	"gioui.org/layout"
+	"gioui.org/io/key"
 	"gioui.org/op"
-	"github.com/go-gost/gost-plus/config"
-	"github.com/go-gost/gost-plus/tunnel"
-	"github.com/go-gost/gost-plus/tunnel/entrypoint"
-	"github.com/go-gost/gost-plus/ui"
+	"github.com/go-gost/gost.plus/config"
+	"github.com/go-gost/gost.plus/tunnel"
+	"github.com/go-gost/gost.plus/tunnel/entrypoint"
+	"github.com/go-gost/gost.plus/ui"
+	_ "github.com/go-gost/gost.plus/winres"
 )
 
 func main() {
-	config.Init()
-	tunnel.LoadConfig()
-	entrypoint.LoadConfig()
+	Init()
 
 	go func() {
 		w := app.NewWindow(
-			app.Title("GOST.PLUS"),
+			app.Title("GOST+"),
 			app.MinSize(800, 600),
 		)
 		err := run(w)
@@ -40,12 +38,22 @@ func run(w *app.Window) error {
 	var ops op.Ops
 	for {
 		switch e := w.NextEvent().(type) {
-		case system.DestroyEvent:
+		case app.DestroyEvent:
 			return e.Err
-		case system.FrameEvent:
-			gtx := layout.NewContext(&ops, e)
+		case app.FrameEvent:
+			gtx := app.NewContext(&ops, e)
 			ui.Layout(gtx)
 			e.Frame(gtx.Ops)
+		case key.Event:
+			if e.Name == key.NameBack {
+				return nil
+			}
 		}
 	}
+}
+
+func Init() {
+	config.Init()
+	tunnel.LoadConfig()
+	entrypoint.LoadConfig()
 }

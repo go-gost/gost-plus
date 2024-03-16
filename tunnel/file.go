@@ -227,6 +227,13 @@ func (s *fileTunnel) Run() (err error) {
 	return nil
 }
 
+func (s *fileTunnel) Status() *xservice.Status {
+	if ss, _ := s.forward.(ServiceStatus); ss != nil {
+		return ss.Status()
+	}
+	return nil
+}
+
 func (s *fileTunnel) Close() error {
 	defer func() {
 		select {

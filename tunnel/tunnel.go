@@ -5,10 +5,11 @@ import (
 	"sync"
 
 	"github.com/go-gost/core/logger"
-	"github.com/go-gost/gost-plus/config"
+	"github.com/go-gost/gost.plus/config"
 	xconfig "github.com/go-gost/x/config"
 	_ "github.com/go-gost/x/connector/tunnel"
 	_ "github.com/go-gost/x/dialer/ws"
+	xservice "github.com/go-gost/x/service"
 )
 
 const (
@@ -96,6 +97,10 @@ func TTLOption(ttl int) Option {
 	}
 }
 
+type ServiceStatus interface {
+	Status() *xservice.Status
+}
+
 type Tunnel interface {
 	ID() string
 	Type() string
@@ -104,6 +109,7 @@ type Tunnel interface {
 	Entrypoint() string
 	Options() Options
 	Run() error
+	Status() *xservice.Status
 	Favorite(b bool)
 	IsFavorite() bool
 	Close() error
@@ -215,37 +221,37 @@ func ChainConfig(id string, name string) *xconfig.ChainConfig {
 }
 
 func LoadConfig() {
-	for _, tun := range config.Global().Tunnels {
+	for _, cfg := range config.Get().Tunnels {
+		if cfg == nil {
+			continue
+		}
+
+		tun := createTunnel(cfg.Type, Options{
+			ID:        cfg.ID,
+			Name:      cfg.Name,
+			Endpoint:  cfg.Endpoint,
+			Hostname:  cfg.Hostname,
+			Username:  cfg.Username,
+			Password:  cfg.Password,
+			EnableTLS: cfg.EnableTLS,
+		})
 		if tun == nil {
 			continue
 		}
 
-		s := createTunnel(tun.Type, Options{
-			ID:        tun.ID,
-			Name:      tun.Name,
-			Endpoint:  tun.Endpoint,
-			Hostname:  tun.Hostname,
-			Username:  tun.Username,
-			Password:  tun.Password,
-			EnableTLS: tun.EnableTLS,
-		})
-		if s == nil {
-			continue
-		}
-
-		if tun.Closed {
-			s.Close()
+		if cfg.Closed {
+			tun.Close()
 		} else {
-			s.Run()
+			tun.Run()
 		}
 
-		s.Favorite(tun.Favorite)
-		Add(s)
+		tun.Favorite(cfg.Favorite)
+		Add(tun)
 	}
 }
 
 func SaveConfig() error {
-	cfg := config.Global()
+	cfg := config.Get()
 	cfg.Tunnels = nil
 
 	for i := 0; i < Count(); i++ {

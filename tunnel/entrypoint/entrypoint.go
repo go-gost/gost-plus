@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/go-gost/core/logger"
-	"github.com/go-gost/gost-plus/config"
-	"github.com/go-gost/gost-plus/tunnel"
+	"github.com/go-gost/gost.plus/config"
+	"github.com/go-gost/gost.plus/tunnel"
 )
 
 const (
@@ -97,7 +97,7 @@ func Delete(id string) {
 }
 
 func LoadConfig() {
-	for _, cfg := range config.Global().EntryPoints {
+	for _, cfg := range config.Get().EntryPoints {
 		if cfg == nil {
 			continue
 		}
@@ -129,7 +129,7 @@ func LoadConfig() {
 }
 
 func SaveConfig() error {
-	cfg := config.Global()
+	cfg := config.Get()
 	cfg.EntryPoints = nil
 
 	for i := 0; i < Count(); i++ {

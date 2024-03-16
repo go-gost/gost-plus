@@ -12,7 +12,7 @@ import (
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/service"
-	"github.com/go-gost/gost-plus/tunnel"
+	"github.com/go-gost/gost.plus/tunnel"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
 	"github.com/go-gost/x/handler/forward/local"
@@ -186,6 +186,13 @@ func (s *tcpEntryPoint) Run() (err error) {
 		s.setErr(s.forward.Serve())
 	}()
 
+	return nil
+}
+
+func (s *tcpEntryPoint) Status() *xservice.Status {
+	if ss, _ := s.forward.(tunnel.ServiceStatus); ss != nil {
+		return ss.Status()
+	}
 	return nil
 }
 

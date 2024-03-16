@@ -21,8 +21,9 @@
 go.work
 
 bin/
+build/
 
 *.syso
 *.apk
 *.idsig
-gost-plus
+gost.plus
