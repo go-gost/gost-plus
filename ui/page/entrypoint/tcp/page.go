@@ -13,6 +13,7 @@ import (
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/gost.plus/tunnel"
 	"github.com/go-gost/gost.plus/tunnel/entrypoint"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/theme"
@@ -71,7 +72,7 @@ func NewPage(r *page.Router) page.Page {
 			},
 		},
 		delDialog: ui_widget.Dialog{
-			Title: "Delete entrypoint?",
+			Title: i18n.Get(i18n.DeleteEntrypoint),
 		},
 	}
 }
@@ -267,17 +268,12 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 		},
 		Fill: theme.Current().ContentSurfaceBg,
 	}.Layout(gtx, func(gtx C) D {
-		return layout.Inset{
-			Top:    8,
-			Bottom: 8,
-			Left:   8,
-			Right:  8,
-		}.Layout(gtx, func(gtx C) D {
+		return layout.UniformInset(16).Layout(gtx, func(gtx C) D {
 			return layout.Flex{
 				Axis: layout.Vertical,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, "Tunnel ID").Layout(gtx)
+					return material.Body1(th, i18n.Get(i18n.TunnelID)).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -286,7 +282,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := uuid.Parse(tid); err != nil {
-							return fmt.Errorf("invalid tunnel ID, should be a valid UUID")
+							return fmt.Errorf(i18n.Get(i18n.ErrInvalidTunnelID))
 						}
 						return nil
 					}(); err != nil {
@@ -303,7 +299,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, "Name").Layout(gtx)
+					return material.Body1(th, i18n.Get(i18n.Name)).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					return p.name.Layout(gtx, th, "")
@@ -311,7 +307,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, "Entrypoint").Layout(gtx)
+					return material.Body1(th, i18n.Get(i18n.Entrypoint)).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -320,7 +316,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := net.ResolveTCPAddr("tcp", addr); err != nil {
-							return fmt.Errorf("invalid address format, should be [IP]:PORT or [HOST]:PORT")
+							return fmt.Errorf(i18n.Get(i18n.ErrInvalidAddr))
 						}
 						return nil
 					}(); err != nil {
@@ -329,7 +325,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 						p.entrypoint.ClearError()
 					}
 
-					return p.entrypoint.Layout(gtx, th, "Address")
+					return p.entrypoint.Layout(gtx, th, i18n.Get(i18n.Address))
 				}),
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 			)

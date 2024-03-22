@@ -8,6 +8,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/page/home/list"
@@ -38,10 +39,6 @@ type homePage struct {
 func NewPage(r *page.Router) page.Page {
 	return &homePage{
 		router: r,
-		nav: ui_widget.NewNav(
-			ui_widget.NewNavButton("Tunnel"),
-			ui_widget.NewNavButton("Entrypoint"),
-		),
 		pages: []navPage{
 			{
 				list: list.Tunnel(r),
@@ -55,7 +52,12 @@ func NewPage(r *page.Router) page.Page {
 	}
 }
 
-func (p *homePage) Init(opts ...page.PageOption) {}
+func (p *homePage) Init(opts ...page.PageOption) {
+	p.nav = ui_widget.NewNav(
+		ui_widget.NewNavButton(i18n.Tunnel),
+		ui_widget.NewNavButton(i18n.Entrypoint),
+	)
+}
 
 func (p *homePage) Layout(gtx C) D {
 	if p.btnAdd.Clicked(gtx) {

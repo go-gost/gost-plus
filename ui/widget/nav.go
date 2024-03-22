@@ -7,8 +7,8 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/theme"
-	"golang.org/x/exp/shiny/materialdesign/colornames"
 )
 
 type Nav struct {
@@ -44,10 +44,8 @@ func (p *Nav) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 
 		if p.current == index {
 			btn.background = theme.Current().NavButtonContrastBg
-			btn.borderWidth = 0
 		} else {
-			btn.background = theme.Current().NavButtonBg
-			btn.borderWidth = 1
+			btn.background = theme.Current().Material.Bg
 		}
 
 		return layout.Inset{
@@ -65,16 +63,14 @@ type NavButton struct {
 	btn          widget.Clickable
 	cornerRadius unit.Dp
 	borderWidth  unit.Dp
-	borderColor  color.NRGBA
 	background   color.NRGBA
-	text         string
+	text         i18n.Key
 }
 
-func NewNavButton(text string) *NavButton {
+func NewNavButton(text i18n.Key) *NavButton {
 	return &NavButton{
 		cornerRadius: 18,
 		borderWidth:  1,
-		borderColor:  color.NRGBA(colornames.Grey200),
 		text:         text,
 	}
 }
@@ -86,7 +82,7 @@ func (btn *NavButton) Layout(gtx layout.Context, th *material.Theme) layout.Dime
 		Button:       &btn.btn,
 	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return widget.Border{
-			Color:        btn.borderColor,
+			Color:        theme.Current().NavButtonContrastBg,
 			Width:        btn.borderWidth,
 			CornerRadius: btn.cornerRadius,
 		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -96,7 +92,7 @@ func (btn *NavButton) Layout(gtx layout.Context, th *material.Theme) layout.Dime
 				Left:   20,
 				Right:  20,
 			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				label := material.Body1(th, btn.text)
+				label := material.Body1(th, btn.text.Value())
 				return label.Layout(gtx)
 			})
 		})

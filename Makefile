@@ -37,7 +37,7 @@ windows-arm64:
 
 # go install gioui.org/cmd/gogio@latest
 android:
-	gogio -x -work -target android -minsdk 33 -version $(VERSION).2 -signkey build/sign.keystore -signpass android -appid gost.plus -o $(BINDIR)/$(NAME)-$(VERSION).aab .
+	gogio -x -work -target android -minsdk 33 -version $(VERSION).3 -signkey build/sign.keystore -signpass android -appid gost.plus -o $(BINDIR)/$(NAME)-$(VERSION).aab .
 
 gz_releases=$(addsuffix .gz, $(PLATFORM_LIST))
 zip_releases=$(addsuffix .zip, $(WINDOWS_ARCH_LIST))

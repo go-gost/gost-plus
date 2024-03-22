@@ -6,6 +6,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/widget/material"
 	"github.com/go-gost/gost.plus/config"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/page/entrypoint"
 	tcp_ep "github.com/go-gost/gost.plus/ui/page/entrypoint/tcp"
@@ -35,6 +36,7 @@ func NewUI() *UI {
 		default:
 			theme.UseLight()
 		}
+		i18n.Set(settings.Lang)
 	}
 
 	th := material.NewTheme()

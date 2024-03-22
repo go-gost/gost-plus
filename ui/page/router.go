@@ -1,14 +1,12 @@
 package page
 
 import (
-	"fmt"
-	"log/slog"
-
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/go-gost/core/logger"
 	"github.com/go-gost/gost.plus/ui/theme"
 )
 
@@ -50,7 +48,10 @@ func (r *Router) Goto(route Route) {
 	r.stack.Push(route)
 
 	page.Init(WithPageID(route.ID))
-	slog.Debug(fmt.Sprintf("go to %s", route.Path), "kind", "router", "route.id", route.ID)
+	logger.Default().WithFields(map[string]any{
+		"kind":     "router",
+		"route.id": route.ID,
+	}).Debugf("go to %s", route.Path)
 }
 
 func (r *Router) Back() {
@@ -64,7 +65,10 @@ func (r *Router) Back() {
 	r.current = route
 
 	page.Init(WithPageID(route.ID))
-	slog.Debug(fmt.Sprintf("back to %s", route.Path), "kind", "router", "route.id", route.ID)
+	logger.Default().WithFields(map[string]any{
+		"kind":     "router",
+		"route.id": route.ID,
+	}).Debugf("back to %s", route.Path)
 }
 
 func (r *Router) Layout(gtx C) D {

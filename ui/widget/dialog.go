@@ -5,6 +5,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
+	"github.com/go-gost/gost.plus/ui/i18n"
 )
 
 type Dialog struct {
@@ -17,129 +18,132 @@ type Dialog struct {
 }
 
 func (p *Dialog) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	if gtx.Constraints.Max.X > gtx.Dp(800) {
-		gtx.Constraints.Max.X = gtx.Dp(800)
-	}
-	gtx.Constraints.Max.X = gtx.Constraints.Max.X * 2 / 3
+	var cl widget.Clickable
+	return cl.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		if gtx.Constraints.Max.X > gtx.Dp(800) {
+			gtx.Constraints.Max.X = gtx.Dp(800)
+		}
+		gtx.Constraints.Max.X = gtx.Constraints.Max.X * 2 / 3
 
-	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Inset{
-			Top:    16,
-			Bottom: 16,
-		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return component.SurfaceStyle{
-				Theme: th,
-				ShadowStyle: component.ShadowStyle{
-					CornerRadius: 28,
-				},
+		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{
+				Top:    16,
+				Bottom: 16,
 			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Inset{
-					Top:    16,
-					Bottom: 16,
-					Left:   24,
-					Right:  24,
+				return component.SurfaceStyle{
+					Theme: th,
+					ShadowStyle: component.ShadowStyle{
+						CornerRadius: 28,
+					},
 				}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return layout.Flex{
-						Axis: layout.Vertical,
-					}.Layout(gtx,
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							if p.Title == "" {
-								return layout.Dimensions{}
-							}
-							return layout.Inset{
-								Top:    8,
-								Bottom: 8,
-							}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								return material.H6(th, p.Title).Layout(gtx)
-							})
-						}),
+					return layout.Inset{
+						Top:    16,
+						Bottom: 16,
+						Left:   24,
+						Right:  24,
+					}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return layout.Flex{
+							Axis: layout.Vertical,
+						}.Layout(gtx,
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								if p.Title == "" {
+									return layout.Dimensions{}
+								}
+								return layout.Inset{
+									Top:    8,
+									Bottom: 8,
+								}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									return material.H6(th, p.Title).Layout(gtx)
+								})
+							}),
 
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							if p.Body == "" {
-								return layout.Dimensions{}
-							}
-							return layout.Inset{
-								Top:    8,
-								Bottom: 8,
-							}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, p.Body).Layout(gtx)
-							})
-						}),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								if p.Body == "" {
+									return layout.Dimensions{}
+								}
+								return layout.Inset{
+									Top:    8,
+									Bottom: 8,
+								}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									return material.Body1(th, p.Body).Layout(gtx)
+								})
+							}),
 
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							if p.Widget == nil {
-								return layout.Dimensions{}
-							}
-							return layout.Inset{
-								Top:    8,
-								Bottom: 8,
-							}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								return p.Widget(gtx, th)
-							})
-						}),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								if p.Widget == nil {
+									return layout.Dimensions{}
+								}
+								return layout.Inset{
+									Top:    8,
+									Bottom: 8,
+								}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									return p.Widget(gtx, th)
+								})
+							}),
 
-						layout.Rigid(layout.Spacer{Height: 8}.Layout),
+							layout.Rigid(layout.Spacer{Height: 8}.Layout),
 
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return layout.Flex{
-								Spacing:   layout.SpaceBetween,
-								Alignment: layout.Middle,
-							}.Layout(gtx,
-								layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-									return layout.Spacer{Width: 8}.Layout(gtx)
-								}),
-								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-									if p.btnCancel.Clicked(gtx) && p.Clicked != nil {
-										p.Clicked(false)
-									}
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return layout.Flex{
+									Spacing:   layout.SpaceBetween,
+									Alignment: layout.Middle,
+								}.Layout(gtx,
+									layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+										return layout.Spacer{Width: 8}.Layout(gtx)
+									}),
+									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										if p.btnCancel.Clicked(gtx) && p.Clicked != nil {
+											p.Clicked(false)
+										}
 
-									return material.ButtonLayoutStyle{
-										Background:   th.Bg,
-										CornerRadius: 20,
-										Button:       &p.btnCancel,
-									}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-										return layout.Inset{
-											Top:    8,
-											Bottom: 8,
-											Left:   24,
-											Right:  24,
+										return material.ButtonLayoutStyle{
+											Background:   th.Bg,
+											CornerRadius: 20,
+											Button:       &p.btnCancel,
 										}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-											label := material.Body1(th, "Cancel")
-											label.Color = th.Fg
-											return label.Layout(gtx)
+											return layout.Inset{
+												Top:    8,
+												Bottom: 8,
+												Left:   24,
+												Right:  24,
+											}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+												label := material.Body1(th, i18n.Get(i18n.Cancel))
+												label.Color = th.Fg
+												return label.Layout(gtx)
+											})
+
 										})
+									}),
+									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										return layout.Spacer{Width: 8}.Layout(gtx)
+									}),
+									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										if p.btnOK.Clicked(gtx) && p.Clicked != nil {
+											p.Clicked(true)
+										}
 
-									})
-								}),
-								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-									return layout.Spacer{Width: 8}.Layout(gtx)
-								}),
-								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-									if p.btnOK.Clicked(gtx) && p.Clicked != nil {
-										p.Clicked(true)
-									}
-
-									return material.ButtonLayoutStyle{
-										Background:   th.Bg,
-										CornerRadius: 20,
-										Button:       &p.btnOK,
-									}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-										return layout.Inset{
-											Top:    8,
-											Bottom: 8,
-											Left:   24,
-											Right:  24,
+										return material.ButtonLayoutStyle{
+											Background:   th.Bg,
+											CornerRadius: 20,
+											Button:       &p.btnOK,
 										}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-											label := material.Body1(th, "OK")
-											label.Color = th.Fg
-											return label.Layout(gtx)
-										})
+											return layout.Inset{
+												Top:    8,
+												Bottom: 8,
+												Left:   24,
+												Right:  24,
+											}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+												label := material.Body1(th, i18n.Get(i18n.OK))
+												label.Color = th.Fg
+												return label.Layout(gtx)
+											})
 
-									})
-								}),
-							)
-						}),
-					)
+										})
+									}),
+								)
+							}),
+						)
+					})
 				})
 			})
 		})

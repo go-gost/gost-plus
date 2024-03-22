@@ -10,6 +10,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/go-gost/gost.plus/tunnel/entrypoint"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/theme"
@@ -84,12 +85,7 @@ func (l *entrypointList) Layout(gtx C, th *material.Theme) D {
 				CornerRadius: 12,
 				Button:       &l.states[index].btn,
 			}.Layout(gtx, func(gtx C) D {
-				return layout.Inset{
-					Top:    8,
-					Bottom: 8,
-					Left:   8,
-					Right:  8,
-				}.Layout(gtx, func(gtx C) D {
+				return layout.UniformInset(16).Layout(gtx, func(gtx C) D {
 					return layout.Flex{
 						Alignment: layout.Middle,
 						Spacing:   layout.SpaceBetween,
@@ -104,13 +100,13 @@ func (l *entrypointList) Layout(gtx C, th *material.Theme) D {
 									return label.Layout(gtx)
 								}),
 								layout.Rigid(layout.Spacer{Height: 8}.Layout),
-								layout.Rigid(material.Body2(th, fmt.Sprintf("Type: %s", strings.ToUpper(t.Type()))).Layout),
+								layout.Rigid(material.Body2(th, fmt.Sprintf("%s: %s", i18n.Get(i18n.Type), strings.ToUpper(t.Type()))).Layout),
 								layout.Rigid(layout.Spacer{Height: 8}.Layout),
-								layout.Rigid(material.Body2(th, fmt.Sprintf("Name: %s", t.Name())).Layout),
+								layout.Rigid(material.Body2(th, fmt.Sprintf("%s: %s", i18n.Get(i18n.Name), t.Name())).Layout),
 								layout.Rigid(layout.Spacer{Height: 8}.Layout),
-								layout.Rigid(material.Body2(th, fmt.Sprintf("Endpoint: %s", t.Endpoint())).Layout),
+								layout.Rigid(material.Body2(th, fmt.Sprintf("%s: %s", i18n.Get(i18n.Endpoint), t.Endpoint())).Layout),
 								layout.Rigid(layout.Spacer{Height: 8}.Layout),
-								layout.Rigid(material.Body2(th, fmt.Sprintf("Entrypoint: %s", t.Entrypoint())).Layout),
+								layout.Rigid(material.Body2(th, fmt.Sprintf("%s: %s", i18n.Get(i18n.Entrypoint), t.Entrypoint())).Layout),
 							)
 						}),
 						layout.Rigid(layout.Spacer{Width: 8}.Layout),

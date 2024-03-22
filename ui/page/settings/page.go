@@ -7,6 +7,7 @@ import (
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
 	"github.com/go-gost/gost.plus/config"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/theme"
@@ -40,8 +41,8 @@ func NewPage(r *page.Router) page.Page {
 				Axis: layout.Vertical,
 			},
 		},
-		lang:  ui_widget.Selector{Title: "Language"},
-		theme: ui_widget.Selector{Title: "Theme"},
+		lang:  ui_widget.Selector{Title: i18n.Language},
+		theme: ui_widget.Selector{Title: i18n.Theme},
 	}
 }
 
@@ -51,17 +52,30 @@ func (p *settingsPage) Init(opts ...page.PageOption) {
 		settings = &config.Settings{}
 	}
 	if settings.Lang == "" {
-		settings.Lang = "en_US"
+		settings.Lang = i18n.Current().Value
 	}
 	if settings.Theme == "" {
 		settings.Theme = theme.Light
 	}
 
 	p.lang.Clear()
-	p.lang.Select(settings.Lang)
+	p.lang.Select(ui_widget.SelectorItem{
+		Name:  i18n.Current().Name,
+		Value: i18n.Current().Value,
+	})
 
 	p.theme.Clear()
-	p.theme.Select(settings.Theme)
+	if settings.Theme == theme.Light {
+		p.theme.Select(ui_widget.SelectorItem{
+			Name:  i18n.Light,
+			Value: settings.Theme,
+		})
+	} else {
+		p.theme.Select(ui_widget.SelectorItem{
+			Name:  i18n.Dark,
+			Value: settings.Theme,
+		})
+	}
 }
 
 func (p *settingsPage) Layout(gtx layout.Context) layout.Dimensions {
@@ -95,7 +109,7 @@ func (p *settingsPage) Layout(gtx layout.Context) layout.Dimensions {
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						title := material.H6(th, "Settings")
+						title := material.H6(th, i18n.Get(i18n.Settings))
 						return title.Layout(gtx)
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
@@ -125,12 +139,7 @@ func (p *settingsPage) layout(gtx layout.Context, th *material.Theme) layout.Dim
 		},
 		Fill: theme.Current().ContentSurfaceBg,
 	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Inset{
-			Top:    8,
-			Bottom: 8,
-			Left:   8,
-			Right:  8,
-		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.UniformInset(16).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:      layout.Vertical,
 				Alignment: layout.Middle,
@@ -170,14 +179,17 @@ func (p *settingsPage) layout(gtx layout.Context, th *material.Theme) layout.Dim
 }
 
 func (p *settingsPage) showLangMenu(gtx layout.Context) {
-	items := []ui_widget.MenuItem{
-		{Key: "en_US", Value: "en_US"},
-		{Key: "zh_CN", Value: "zh_CN"},
+	var items []ui_widget.MenuItem
+	for _, lang := range i18n.Langs() {
+		items = append(items, ui_widget.MenuItem{
+			Key:   lang.Name,
+			Value: lang.Value,
+		})
 	}
 
 	var found bool
 	for i := range items {
-		if found = p.lang.Any(items[i].Value); found {
+		if found = p.lang.Any(items[i].Key.Value()); found {
 			items[i].Selected = found
 			break
 		}
@@ -186,21 +198,26 @@ func (p *settingsPage) showLangMenu(gtx layout.Context) {
 		items[0].Selected = true
 	}
 
-	p.menu.Title = "Language"
+	p.menu.Title = i18n.Get(i18n.Language)
 	p.menu.Items = items
 	p.menu.Selected = func(index int) {
 		p.lang.Clear()
-		p.lang.Select(p.menu.Items[index].Value)
+		p.lang.Select(ui_widget.SelectorItem{
+			Name:  p.menu.Items[index].Key,
+			Value: p.menu.Items[index].Value,
+		})
 		p.modal.Disappear(gtx.Now)
 
 		cfg := config.Get()
 		if cfg.Settings == nil {
 			cfg.Settings = &config.Settings{}
 		}
-		cfg.Settings.Lang = p.lang.Value()
+		cfg.Settings.Lang = p.lang.Item().Value
 
 		config.Set(cfg)
 		cfg.Write()
+
+		i18n.Set(cfg.Settings.Lang)
 	}
 
 	p.modal.Widget = func(gtx layout.Context, th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
@@ -211,13 +228,13 @@ func (p *settingsPage) showLangMenu(gtx layout.Context) {
 
 func (p *settingsPage) showThemeMenu(gtx layout.Context) {
 	items := []ui_widget.MenuItem{
-		{Key: "light", Value: theme.Light},
-		{Key: "dark", Value: theme.Dark},
+		{Key: i18n.Light, Value: theme.Light},
+		{Key: i18n.Dark, Value: theme.Dark},
 	}
 
 	var found bool
 	for i := range items {
-		if found = p.theme.Any(items[i].Value); found {
+		if found = p.theme.Any(items[i].Key.Value()); found {
 			items[i].Selected = found
 			break
 		}
@@ -226,18 +243,21 @@ func (p *settingsPage) showThemeMenu(gtx layout.Context) {
 		items[0].Selected = true
 	}
 
-	p.menu.Title = "Theme"
+	p.menu.Title = i18n.Get(i18n.Theme)
 	p.menu.Items = items
 	p.menu.Selected = func(index int) {
 		p.theme.Clear()
-		p.theme.Select(p.menu.Items[index].Value)
+		p.theme.Select(ui_widget.SelectorItem{
+			Name:  p.menu.Items[index].Key,
+			Value: p.menu.Items[index].Value,
+		})
 		p.modal.Disappear(gtx.Now)
 
 		cfg := config.Get()
 		if cfg.Settings == nil {
 			cfg.Settings = &config.Settings{}
 		}
-		cfg.Settings.Theme = p.theme.Value()
+		cfg.Settings.Theme = p.theme.Item().Value
 
 		config.Set(cfg)
 		cfg.Write()

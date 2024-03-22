@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	_ "net"
 	"os"
 
@@ -9,6 +8,7 @@ import (
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/io/key"
 	"gioui.org/op"
+	"github.com/go-gost/core/logger"
 	"github.com/go-gost/gost.plus/config"
 	"github.com/go-gost/gost.plus/tunnel"
 	"github.com/go-gost/gost.plus/tunnel/entrypoint"
@@ -26,7 +26,7 @@ func main() {
 		)
 		err := run(w)
 		if err != nil {
-			log.Fatal(err)
+			logger.Default().Fatal(err)
 		}
 		os.Exit(0)
 	}()

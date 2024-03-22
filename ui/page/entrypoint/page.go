@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/theme"
@@ -18,7 +19,7 @@ type D = layout.Dimensions
 type navButton struct {
 	btn  widget.Clickable
 	name string
-	desc string
+	desc i18n.Key
 	path page.PagePath
 }
 
@@ -39,15 +40,16 @@ func NewPage(r *page.Router) page.Page {
 				Axis: layout.Vertical,
 			},
 		},
+
 		navs: []navButton{
 			{
 				name: "TCP",
-				desc: "Create an entrypoint to the specified TCP tunnel",
+				desc: i18n.TCPEntrypointDesc,
 				path: page.PageEntrypointTCP,
 			},
 			{
 				name: "UDP",
-				desc: "Create an entrypoint to the specified UDP tunnel",
+				desc: i18n.UDPEntrypointDesc,
 				path: page.PageEntrypointUDP,
 			},
 		},
@@ -85,7 +87,7 @@ func (p *entrypointPage) Layout(gtx C) D {
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
 					layout.Rigid(func(gtx C) D {
-						title := material.H6(th, "Entrypoint")
+						title := material.H6(th, i18n.Get(i18n.Entrypoint))
 						return title.Layout(gtx)
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
@@ -111,12 +113,7 @@ func (p *entrypointPage) Layout(gtx C) D {
 						CornerRadius: 12,
 						Button:       &p.navs[index].btn,
 					}.Layout(gtx, func(gtx C) D {
-						return layout.Inset{
-							Top:    8,
-							Bottom: 8,
-							Left:   8,
-							Right:  8,
-						}.Layout(gtx, func(gtx C) D {
+						return layout.UniformInset(16).Layout(gtx, func(gtx C) D {
 							return layout.Flex{
 								Alignment: layout.Middle,
 								Spacing:   layout.SpaceBetween,
@@ -127,7 +124,7 @@ func (p *entrypointPage) Layout(gtx C) D {
 									}.Layout(gtx,
 										layout.Rigid(material.Body1(th, p.navs[index].name).Layout),
 										layout.Rigid(layout.Spacer{Height: 8}.Layout),
-										layout.Rigid(material.Body2(th, p.navs[index].desc).Layout),
+										layout.Rigid(material.Body2(th, p.navs[index].desc.Value()).Layout),
 									)
 								}),
 								layout.Rigid(layout.Spacer{Width: 8}.Layout),

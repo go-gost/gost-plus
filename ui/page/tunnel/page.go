@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/theme"
@@ -18,7 +19,7 @@ type D = layout.Dimensions
 type navButton struct {
 	btn  widget.Clickable
 	name string
-	desc string
+	desc i18n.Key
 	path page.PagePath
 }
 
@@ -42,22 +43,22 @@ func NewPage(r *page.Router) page.Page {
 		navs: []navButton{
 			{
 				name: "File",
-				desc: "Expose local files to public network",
+				desc: i18n.FileTunnelDesc,
 				path: page.PageTunnelFile,
 			},
 			{
 				name: "HTTP",
-				desc: "Expose local HTTP service to public network",
+				desc: i18n.HTTPTunnelDesc,
 				path: page.PageTunnelHTTP,
 			},
 			{
 				name: "TCP",
-				desc: "Expose local TCP service to public network",
+				desc: i18n.TCPTunnelDesc,
 				path: page.PageTunnelTCP,
 			},
 			{
 				name: "UDP",
-				desc: "Expose local UDP service to public network",
+				desc: i18n.UDPTunnelDesc,
 				path: page.PageTunnelUDP,
 			},
 		},
@@ -95,7 +96,7 @@ func (p *tunnelPage) Layout(gtx C) D {
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
 					layout.Rigid(func(gtx C) D {
-						title := material.H6(th, "Tunnel")
+						title := material.H6(th, i18n.Get(i18n.Tunnel))
 						// title.Font.Weight = font.Bold
 						return title.Layout(gtx)
 					}),
@@ -122,12 +123,7 @@ func (p *tunnelPage) Layout(gtx C) D {
 						CornerRadius: 12,
 						Button:       &p.navs[index].btn,
 					}.Layout(gtx, func(gtx C) D {
-						return layout.Inset{
-							Top:    8,
-							Bottom: 8,
-							Left:   8,
-							Right:  8,
-						}.Layout(gtx, func(gtx C) D {
+						return layout.UniformInset(16).Layout(gtx, func(gtx C) D {
 							return layout.Flex{
 								Alignment: layout.Middle,
 								Spacing:   layout.SpaceBetween,
@@ -138,7 +134,7 @@ func (p *tunnelPage) Layout(gtx C) D {
 									}.Layout(gtx,
 										layout.Rigid(material.Body1(th, p.navs[index].name).Layout),
 										layout.Rigid(layout.Spacer{Height: 8}.Layout),
-										layout.Rigid(material.Body2(th, p.navs[index].desc).Layout),
+										layout.Rigid(material.Body2(th, p.navs[index].desc.Value()).Layout),
 									)
 								}),
 								layout.Rigid(layout.Spacer{Width: 8}.Layout),

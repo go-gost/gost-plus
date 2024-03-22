@@ -16,6 +16,7 @@ import (
 	"gioui.org/x/component"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/gost.plus/tunnel"
+	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/icons"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/theme"
@@ -87,7 +88,7 @@ func NewPage(r *page.Router) page.Page {
 			},
 		},
 		delDialog: ui_widget.Dialog{
-			Title: "Delete tunnel?",
+			Title: i18n.Get(i18n.DeleteTunnel),
 		},
 	}
 }
@@ -294,12 +295,7 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 		},
 		Fill: theme.Current().ContentSurfaceBg,
 	}.Layout(gtx, func(gtx C) D {
-		return layout.Inset{
-			Top:    8,
-			Bottom: 8,
-			Left:   8,
-			Right:  8,
-		}.Layout(gtx, func(gtx C) D {
+		return layout.UniformInset(16).Layout(gtx, func(gtx C) D {
 			return layout.Flex{
 				Axis: layout.Vertical,
 			}.Layout(gtx,
@@ -387,14 +383,14 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, "Name").Layout(gtx)
+					return material.Body1(th, i18n.Get(i18n.Name)).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					return p.name.Layout(gtx, th, "")
 				}),
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, "Endpoint").Layout(gtx)
+					return material.Body1(th, i18n.Get(i18n.Endpoint)).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -412,7 +408,7 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 							return err
 						}
 						if !fs.IsDir() {
-							return fmt.Errorf("%s is not a directory", dir)
+							return fmt.Errorf("%s %s", dir, i18n.Get(i18n.ErrDirectory))
 						}
 						return nil
 					}(); err != nil {
@@ -421,7 +417,7 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 						p.endpoint.ClearError()
 					}
 
-					return p.endpoint.Layout(gtx, th, "Directory path")
+					return p.endpoint.Layout(gtx, th, i18n.Get(i18n.DirectoryPath))
 				}),
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
@@ -429,7 +425,7 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 					return layout.Flex{
 						Spacing: layout.SpaceBetween,
 					}.Layout(gtx,
-						layout.Flexed(1, material.Body1(th, "Basic auth").Layout),
+						layout.Flexed(1, material.Body1(th, i18n.Get(i18n.BasicAuth)).Layout),
 						layout.Rigid(material.Switch(th, &p.basicAuth, "basic auth").Layout),
 					)
 				}),
@@ -440,7 +436,7 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 						p.username.Clear()
 						return D{}
 					}
-					return p.username.Layout(gtx, th, "Username")
+					return p.username.Layout(gtx, th, i18n.Get(i18n.Username))
 				}),
 				layout.Rigid(func(gtx C) D {
 					if !p.basicAuth.Value {
@@ -476,7 +472,7 @@ func (p *filePage) layout(gtx C, th *material.Theme) D {
 					return layout.Inset{
 						Bottom: 8,
 					}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return p.password.Layout(gtx, th, "Password")
+						return p.password.Layout(gtx, th, i18n.Get(i18n.Password))
 					})
 				}),
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
