@@ -27,7 +27,6 @@ type D = layout.Dimensions
 
 type tcpPage struct {
 	router *page.Router
-	modal  *component.ModalLayer
 
 	btnBack     widget.Clickable
 	btnState    widget.Clickable
@@ -51,7 +50,6 @@ type tcpPage struct {
 func NewPage(r *page.Router) page.Page {
 	return &tcpPage{
 		router: r,
-		modal:  component.NewModal(),
 		list: layout.List{
 			// NOTE: the list must be vertical
 			Axis: layout.Vertical,
@@ -72,7 +70,7 @@ func NewPage(r *page.Router) page.Page {
 			},
 		},
 		delDialog: ui_widget.Dialog{
-			Title: i18n.Get(i18n.DeleteEntrypoint),
+			Title: i18n.DeleteEntrypoint,
 		},
 	}
 }
@@ -91,6 +89,7 @@ func (p *tcpPage) Init(opts ...page.PageOption) {
 		p.edit = true
 	}
 
+	p.tunnelID.Clear()
 	p.name.Clear()
 	p.entrypoint.Clear()
 
@@ -126,17 +125,14 @@ func (p *tcpPage) Layout(gtx C) D {
 				p.delete()
 				p.router.Back()
 			}
-			p.modal.Disappear(gtx.Now)
+			p.router.HideModal(gtx)
 		}
-		p.modal.Widget = func(gtx layout.Context, th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+		p.router.ShowModal(gtx, func(gtx page.C, th *material.Theme) page.D {
 			return p.delDialog.Layout(gtx, th)
-		}
-		p.modal.Appear(gtx.Now)
+		})
 	}
 
 	th := p.router.Theme
-
-	defer p.modal.Layout(gtx, th)
 
 	return layout.Flex{
 		Axis: layout.Vertical,
@@ -273,7 +269,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 				Axis: layout.Vertical,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.TunnelID)).Layout(gtx)
+					return material.Body1(th, i18n.TunnelID.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -282,7 +278,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := uuid.Parse(tid); err != nil {
-							return fmt.Errorf(i18n.Get(i18n.ErrInvalidTunnelID))
+							return fmt.Errorf(i18n.ErrInvalidTunnelID.Value())
 						}
 						return nil
 					}(); err != nil {
@@ -299,7 +295,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.Name)).Layout(gtx)
+					return material.Body1(th, i18n.Name.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					return p.name.Layout(gtx, th, "")
@@ -307,7 +303,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.Entrypoint)).Layout(gtx)
+					return material.Body1(th, i18n.Entrypoint.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -316,7 +312,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := net.ResolveTCPAddr("tcp", addr); err != nil {
-							return fmt.Errorf(i18n.Get(i18n.ErrInvalidAddr))
+							return fmt.Errorf(i18n.ErrInvalidAddr.Value())
 						}
 						return nil
 					}(); err != nil {
@@ -325,7 +321,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 						p.entrypoint.ClearError()
 					}
 
-					return p.entrypoint.Layout(gtx, th, i18n.Get(i18n.Address))
+					return p.entrypoint.Layout(gtx, th, i18n.Address.Value())
 				}),
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 			)
@@ -390,6 +386,7 @@ func (p *tcpPage) onoff() {
 			tunnel.IDOption(opts.ID),
 			tunnel.NameOption(opts.Name),
 			tunnel.EndpointOption(opts.Endpoint),
+			tunnel.CreatedAtOption(opts.CreatedAt),
 		)
 	} else {
 		ep.Close()

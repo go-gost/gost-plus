@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"time"
 
 	"gioui.org/font"
 	"gioui.org/io/clipboard"
@@ -29,7 +30,6 @@ type D = layout.Dimensions
 
 type tcpPage struct {
 	router *page.Router
-	modal  *component.ModalLayer
 
 	btnBack     widget.Clickable
 	btnState    widget.Clickable
@@ -42,6 +42,8 @@ type tcpPage struct {
 
 	wgID         widget.Clickable
 	wgEntrypoint widget.Clickable
+	lastCopyID   time.Time
+	lastCopyEP   time.Time
 
 	name     component.TextField
 	endpoint component.TextField
@@ -55,7 +57,6 @@ type tcpPage struct {
 func NewPage(r *page.Router) page.Page {
 	return &tcpPage{
 		router: r,
-		modal:  component.NewModal(),
 		list: layout.List{
 			// NOTE: the list must be vertical
 			Axis: layout.Vertical,
@@ -71,7 +72,7 @@ func NewPage(r *page.Router) page.Page {
 			},
 		},
 		delDialog: ui_widget.Dialog{
-			Title: i18n.Get(i18n.DeleteTunnel),
+			Title: i18n.DeleteTunnel,
 		},
 	}
 }
@@ -123,17 +124,14 @@ func (p *tcpPage) Layout(gtx C) D {
 				p.delete()
 				p.router.Back()
 			}
-			p.modal.Disappear(gtx.Now)
+			p.router.HideModal(gtx)
 		}
-		p.modal.Widget = func(gtx layout.Context, th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+		p.router.ShowModal(gtx, func(gtx page.C, th *material.Theme) page.D {
 			return p.delDialog.Layout(gtx, th)
-		}
-		p.modal.Appear(gtx.Now)
+		})
 	}
 
 	th := p.router.Theme
-
-	defer p.modal.Layout(gtx, th)
 
 	return layout.Flex{
 		Axis: layout.Vertical,
@@ -280,9 +278,9 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 
 					gtx.Source = src
 
-					copied := false
 					if p.wgID.Clicked(gtx) {
-						copied = true
+						p.lastCopyEP = time.Time{}
+						p.lastCopyID = time.Now()
 						gtx.Execute(clipboard.WriteCmd{
 							Data: io.NopCloser(bytes.NewBufferString(tun.ID())),
 						})
@@ -303,11 +301,10 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 								}),
 								layout.Rigid(layout.Spacer{Width: 8}.Layout),
 								layout.Rigid(func(gtx C) D {
-									c := color.NRGBA(colornames.Blue500)
-									if copied {
-										c = color.NRGBA(colornames.Green500)
+									if time.Since(p.lastCopyID) < 3*time.Second {
+										return icons.IconDone.Layout(gtx, color.NRGBA(colornames.Green500))
 									}
-									return icons.IconCopy.Layout(gtx, c)
+									return icons.IconCopy.Layout(gtx, color.NRGBA(colornames.Blue500))
 								}),
 							)
 						})
@@ -321,9 +318,9 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 
 					gtx.Source = src
 
-					copied := false
 					if p.wgEntrypoint.Clicked(gtx) {
-						copied = true
+						p.lastCopyID = time.Time{}
+						p.lastCopyEP = time.Now()
 						gtx.Execute(clipboard.WriteCmd{
 							Data: io.NopCloser(bytes.NewBufferString(tun.Entrypoint())),
 						})
@@ -344,11 +341,10 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 								}),
 								layout.Rigid(layout.Spacer{Width: 8}.Layout),
 								layout.Rigid(func(gtx C) D {
-									c := color.NRGBA(colornames.Blue500)
-									if copied {
-										c = color.NRGBA(colornames.Green500)
+									if time.Since(p.lastCopyEP) < 3*time.Second {
+										return icons.IconDone.Layout(gtx, color.NRGBA(colornames.Green500))
 									}
-									return icons.IconCopy.Layout(gtx, c)
+									return icons.IconCopy.Layout(gtx, color.NRGBA(colornames.Blue500))
 								}),
 							)
 						})
@@ -357,14 +353,14 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.Name)).Layout(gtx)
+					return material.Body1(th, i18n.Name.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					return p.name.Layout(gtx, th, "")
 				}),
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.Endpoint)).Layout(gtx)
+					return material.Body1(th, i18n.Endpoint.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -373,7 +369,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := net.ResolveTCPAddr("tcp", addr); err != nil {
-							return fmt.Errorf(i18n.Get(i18n.ErrInvalidAddr))
+							return fmt.Errorf(i18n.ErrInvalidAddr.Value())
 						}
 						return nil
 					}(); err != nil {
@@ -382,7 +378,7 @@ func (p *tcpPage) layout(gtx C, th *material.Theme) D {
 						p.endpoint.ClearError()
 					}
 
-					return p.endpoint.Layout(gtx, th, i18n.Get(i18n.Address))
+					return p.endpoint.Layout(gtx, th, i18n.Address.Value())
 				}),
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 			)
@@ -446,6 +442,7 @@ func (p *tcpPage) onoff() {
 			tunnel.NameOption(opts.Name),
 			tunnel.IDOption(opts.ID),
 			tunnel.EndpointOption(opts.Endpoint),
+			tunnel.CreatedAtOption(opts.CreatedAt),
 		)
 	} else {
 		tun.Close()

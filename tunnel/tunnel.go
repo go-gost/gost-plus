@@ -3,6 +3,7 @@ package tunnel
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/gost.plus/config"
@@ -39,6 +40,8 @@ type Options struct {
 	EnableTLS bool
 	Keepalive bool
 	TTL       int
+	CreatedAt time.Time
+	Stats     config.ServiceStats
 }
 
 type Option func(opts *Options)
@@ -97,6 +100,12 @@ func TTLOption(ttl int) Option {
 	}
 }
 
+func CreatedAtOption(createdAt time.Time) Option {
+	return func(opts *Options) {
+		opts.CreatedAt = createdAt
+	}
+}
+
 type ServiceStatus interface {
 	Status() *xservice.Status
 }
@@ -110,6 +119,8 @@ type Tunnel interface {
 	Options() Options
 	Run() error
 	Status() *xservice.Status
+	Stats() config.ServiceStats
+	SetStats(stats config.ServiceStats)
 	Favorite(b bool)
 	IsFavorite() bool
 	Close() error
@@ -234,6 +245,8 @@ func LoadConfig() {
 			Username:  cfg.Username,
 			Password:  cfg.Password,
 			EnableTLS: cfg.EnableTLS,
+			CreatedAt: cfg.CreatedAt,
+			Stats:     cfg.Stats,
 		})
 		if tun == nil {
 			continue
@@ -273,6 +286,8 @@ func SaveConfig() error {
 			EnableTLS: opts.EnableTLS,
 			Favorite:  tun.IsFavorite(),
 			Closed:    tun.IsClosed(),
+			CreatedAt: opts.CreatedAt,
+			Stats:     tun.Stats(),
 		})
 	}
 
@@ -285,7 +300,7 @@ func SaveConfig() error {
 	return nil
 }
 
-func createTunnel(st string, opts Options) Tunnel {
+func createTunnel(st string, opts Options) (t Tunnel) {
 	options := []Option{
 		IDOption(opts.ID),
 		NameOption(opts.Name),
@@ -294,17 +309,22 @@ func createTunnel(st string, opts Options) Tunnel {
 		UsernameOption(opts.Username),
 		PasswordOption(opts.Password),
 		EnableTLSOption(opts.EnableTLS),
+		CreatedAtOption(opts.CreatedAt),
 	}
+
 	switch st {
 	case FileTunnel:
-		return NewFileTunnel(options...)
+		t = NewFileTunnel(options...)
 	case HTTPTunnel:
-		return NewHTTPTunnel(options...)
+		t = NewHTTPTunnel(options...)
 	case TCPTunnel:
-		return NewTCPTunnel(options...)
+		t = NewTCPTunnel(options...)
 	case UDPTunnel:
-		return NewUDPTunnel(options...)
+		t = NewUDPTunnel(options...)
 	default:
 		return nil
 	}
+
+	t.SetStats(opts.Stats)
+	return
 }

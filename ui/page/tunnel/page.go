@@ -96,7 +96,7 @@ func (p *tunnelPage) Layout(gtx C) D {
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
 					layout.Rigid(func(gtx C) D {
-						title := material.H6(th, i18n.Get(i18n.Tunnel))
+						title := material.H6(th, i18n.Tunnel.Value())
 						// title.Font.Weight = font.Bold
 						return title.Layout(gtx)
 					}),

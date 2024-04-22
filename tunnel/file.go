@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-gost/core/auth"
 	"github.com/go-gost/core/chain"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/service"
+	cfg "github.com/go-gost/gost.plus/config"
 	xauth "github.com/go-gost/x/auth"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
@@ -24,6 +26,7 @@ import (
 	"github.com/go-gost/x/listener/tcp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
+	"github.com/go-gost/x/stats"
 	"github.com/google/uuid"
 )
 
@@ -34,6 +37,7 @@ type fileTunnel struct {
 	file     service.Service
 	forward  service.Service
 	favorite atomic.Bool
+	stats    cfg.ServiceStats
 
 	cclose chan struct{}
 
@@ -46,7 +50,6 @@ func NewFileTunnel(opts ...Option) Tunnel {
 	for _, opt := range opts {
 		opt(&options)
 	}
-
 	if options.ID == "" {
 		options.ID = uuid.NewString()
 	}
@@ -60,6 +63,9 @@ func NewFileTunnel(opts ...Option) Tunnel {
 
 	if options.Name == "" {
 		options.Name = endpoint
+	}
+	if options.CreatedAt.IsZero() {
+		options.CreatedAt = time.Now()
 	}
 
 	s := &fileTunnel{
@@ -192,11 +198,21 @@ func (s *fileTunnel) Run() (err error) {
 			return
 		}
 
+		pStats := &stats.Stats{}
+		{
+			pStats.Add(stats.KindCurrentConns, int64(s.stats.CurrentConns))
+			pStats.Add(stats.KindInputBytes, int64(s.stats.InputBytes))
+			pStats.Add(stats.KindOutputBytes, int64(s.stats.OutputBytes))
+			pStats.Add(stats.KindTotalConns, int64(s.stats.TotalConns))
+			pStats.Add(stats.KindTotalErrs, int64(s.stats.TotalErrs))
+		}
+
 		cfg := s.config.Services[1]
 		ln := rtcp.NewListener(
 			listener.AddrOption(cfg.Addr),
 			listener.ChainOption(ch),
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})),
+			listener.StatsOption(pStats),
 		)
 		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
 			return
@@ -214,7 +230,10 @@ func (s *fileTunnel) Run() (err error) {
 				hop.LoggerOption(log.WithFields(map[string]any{"kind": "hop"})),
 			))
 		}
-		s.forward = xservice.NewService(s.opts.Name, ln, h, xservice.LoggerOption(log))
+		s.forward = xservice.NewService(s.opts.Name, ln, h,
+			xservice.LoggerOption(log),
+			xservice.StatsOption(pStats),
+		)
 		log.Infof("service listen on %s", s.file.Addr())
 	}
 
@@ -232,6 +251,18 @@ func (s *fileTunnel) Status() *xservice.Status {
 		return ss.Status()
 	}
 	return nil
+}
+
+func (s *fileTunnel) Stats() cfg.ServiceStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.stats
+}
+
+func (s *fileTunnel) SetStats(stats cfg.ServiceStats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats = stats
 }
 
 func (s *fileTunnel) Close() error {

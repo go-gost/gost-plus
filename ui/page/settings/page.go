@@ -17,7 +17,6 @@ import (
 
 type settingsPage struct {
 	router *page.Router
-	modal  *component.ModalLayer
 	menu   ui_widget.Menu
 	list   widget.List
 
@@ -30,7 +29,6 @@ type settingsPage struct {
 func NewPage(r *page.Router) page.Page {
 	return &settingsPage{
 		router: r,
-		modal:  component.NewModal(),
 		menu: ui_widget.Menu{
 			List: layout.List{
 				Axis: layout.Vertical,
@@ -85,8 +83,6 @@ func (p *settingsPage) Layout(gtx layout.Context) layout.Dimensions {
 
 	th := p.router.Theme
 
-	defer p.modal.Layout(gtx, th)
-
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
@@ -109,7 +105,7 @@ func (p *settingsPage) Layout(gtx layout.Context) layout.Dimensions {
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						title := material.H6(th, i18n.Get(i18n.Settings))
+						title := material.H6(th, i18n.Settings.Value())
 						return title.Layout(gtx)
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
@@ -198,7 +194,7 @@ func (p *settingsPage) showLangMenu(gtx layout.Context) {
 		items[0].Selected = true
 	}
 
-	p.menu.Title = i18n.Get(i18n.Language)
+	p.menu.Title = i18n.Language
 	p.menu.Items = items
 	p.menu.Selected = func(index int) {
 		p.lang.Clear()
@@ -206,7 +202,7 @@ func (p *settingsPage) showLangMenu(gtx layout.Context) {
 			Name:  p.menu.Items[index].Key,
 			Value: p.menu.Items[index].Value,
 		})
-		p.modal.Disappear(gtx.Now)
+		p.router.HideModal(gtx)
 
 		cfg := config.Get()
 		if cfg.Settings == nil {
@@ -220,10 +216,9 @@ func (p *settingsPage) showLangMenu(gtx layout.Context) {
 		i18n.Set(cfg.Settings.Lang)
 	}
 
-	p.modal.Widget = func(gtx layout.Context, th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+	p.router.ShowModal(gtx, func(gtx page.C, th *material.Theme) page.D {
 		return p.menu.Layout(gtx, th)
-	}
-	p.modal.Appear(gtx.Now)
+	})
 }
 
 func (p *settingsPage) showThemeMenu(gtx layout.Context) {
@@ -243,7 +238,7 @@ func (p *settingsPage) showThemeMenu(gtx layout.Context) {
 		items[0].Selected = true
 	}
 
-	p.menu.Title = i18n.Get(i18n.Theme)
+	p.menu.Title = i18n.Theme
 	p.menu.Items = items
 	p.menu.Selected = func(index int) {
 		p.theme.Clear()
@@ -251,7 +246,7 @@ func (p *settingsPage) showThemeMenu(gtx layout.Context) {
 			Name:  p.menu.Items[index].Key,
 			Value: p.menu.Items[index].Value,
 		})
-		p.modal.Disappear(gtx.Now)
+		p.router.HideModal(gtx)
 
 		cfg := config.Get()
 		if cfg.Settings == nil {
@@ -270,8 +265,7 @@ func (p *settingsPage) showThemeMenu(gtx layout.Context) {
 		}
 	}
 
-	p.modal.Widget = func(gtx layout.Context, th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+	p.router.ShowModal(gtx, func(gtx page.C, th *material.Theme) page.D {
 		return p.menu.Layout(gtx, th)
-	}
-	p.modal.Appear(gtx.Now)
+	})
 }

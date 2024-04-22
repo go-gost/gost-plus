@@ -93,10 +93,10 @@ const (
 type Key string
 
 func (k Key) Value() string {
-	return Get(k)
+	return get(k)
 }
 
-func Get(key Key) string {
+func get(key Key) string {
 	mux.RLock()
 	defer mux.RUnlock()
 

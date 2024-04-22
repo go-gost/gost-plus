@@ -103,6 +103,7 @@ type Tunnel struct {
 	Keepalive bool   `yaml:",omitempty"`
 	TTL       int    `yaml:"ttl,omitempty"`
 
+	Stats     ServiceStats
 	Favorite  bool
 	Closed    bool
 	CreatedAt time.Time
@@ -136,4 +137,16 @@ func (c *Config) Write() error {
 	}
 
 	return os.WriteFile(filepath.Join(configDir, configFile), buf.Bytes(), 0644)
+}
+
+type ServiceStats struct {
+	Time            time.Time
+	TotalConns      uint64
+	RequestRate     float64
+	CurrentConns    uint64
+	TotalErrs       uint64
+	InputBytes      uint64
+	InputRateBytes  uint64
+	OutputBytes     uint64
+	OutputRateBytes uint64
 }

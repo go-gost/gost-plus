@@ -5,9 +5,15 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"gioui.org/x/component"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/gost.plus/ui/theme"
+)
+
+const (
+	MaxWidth = 800
 )
 
 type C = layout.Context
@@ -23,12 +29,14 @@ type Router struct {
 	stack   routeStack
 	current Route
 	*material.Theme
+	modal *component.ModalLayer
 }
 
 func NewRouter(th *material.Theme) *Router {
 	r := &Router{
 		pages: make(map[PagePath]Page),
 		Theme: th,
+		modal: component.NewModal(),
 	}
 
 	return r
@@ -74,6 +82,8 @@ func (r *Router) Back() {
 func (r *Router) Layout(gtx C) D {
 	r.Theme.Palette = theme.Current().Material
 
+	defer r.modal.Layout(gtx, r.Theme)
+
 	return layout.Background{}.Layout(gtx,
 		func(gtx C) D {
 			defer clip.Rect{
@@ -96,7 +106,7 @@ func (r *Router) Layout(gtx C) D {
 			}
 
 			inset := layout.Inset{}
-			width := unit.Dp(800)
+			width := unit.Dp(MaxWidth)
 			if x := gtx.Metric.PxToDp(gtx.Constraints.Max.X); x > width {
 				inset.Left = (x - width) / 2
 				inset.Right = inset.Left
@@ -107,6 +117,25 @@ func (r *Router) Layout(gtx C) D {
 			})
 		},
 	)
+}
+
+func (r *Router) ShowModal(gtx layout.Context, w func(gtx C, th *material.Theme) D) {
+	r.modal.Widget = func(gtx C, th *material.Theme, anim *component.VisibilityAnimation) D {
+		if gtx.Constraints.Max.X > gtx.Dp(MaxWidth) {
+			gtx.Constraints.Max.X = gtx.Dp(MaxWidth)
+		}
+		gtx.Constraints.Max.X = gtx.Constraints.Max.X * 2 / 3
+
+		var clk widget.Clickable
+		return clk.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return w(gtx, th)
+		})
+	}
+	r.modal.Appear(gtx.Now)
+}
+
+func (r *Router) HideModal(gtx C) {
+	r.modal.Disappear(gtx.Now)
 }
 
 type routeStack struct {

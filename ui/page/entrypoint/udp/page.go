@@ -29,7 +29,6 @@ type D = layout.Dimensions
 
 type udpPage struct {
 	router *page.Router
-	modal  *component.ModalLayer
 
 	btnBack     widget.Clickable
 	btnState    widget.Clickable
@@ -56,7 +55,6 @@ type udpPage struct {
 func NewPage(r *page.Router) page.Page {
 	return &udpPage{
 		router: r,
-		modal:  component.NewModal(),
 		list: layout.List{
 			// NOTE: the list must be vertical
 			Axis: layout.Vertical,
@@ -85,7 +83,7 @@ func NewPage(r *page.Router) page.Page {
 			},
 		},
 		delDialog: ui_widget.Dialog{
-			Title: i18n.Get(i18n.DeleteEntrypoint),
+			Title: i18n.DeleteEntrypoint,
 		},
 	}
 }
@@ -104,6 +102,7 @@ func (p *udpPage) Init(opts ...page.PageOption) {
 		p.edit = true
 	}
 
+	p.tunnelID.Clear()
 	p.name.Clear()
 	p.entrypoint.Clear()
 
@@ -144,17 +143,14 @@ func (p *udpPage) Layout(gtx C) D {
 				p.delete()
 				p.router.Back()
 			}
-			p.modal.Disappear(gtx.Now)
+			p.router.HideModal(gtx)
 		}
-		p.modal.Widget = func(gtx layout.Context, th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+		p.router.ShowModal(gtx, func(gtx page.C, th *material.Theme) page.D {
 			return p.delDialog.Layout(gtx, th)
-		}
-		p.modal.Appear(gtx.Now)
+		})
 	}
 
 	th := p.router.Theme
-
-	defer p.modal.Layout(gtx, th)
 
 	return layout.Flex{
 		Axis: layout.Vertical,
@@ -291,7 +287,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 				Axis: layout.Vertical,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.TunnelID)).Layout(gtx)
+					return material.Body1(th, i18n.TunnelID.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -300,7 +296,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := uuid.Parse(tid); err != nil {
-							return fmt.Errorf(i18n.Get(i18n.ErrInvalidTunnelID))
+							return fmt.Errorf(i18n.ErrInvalidTunnelID.Value())
 						}
 						return nil
 					}(); err != nil {
@@ -317,7 +313,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.Name)).Layout(gtx)
+					return material.Body1(th, i18n.Name.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					return p.name.Layout(gtx, th, "")
@@ -325,7 +321,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Body1(th, i18n.Get(i18n.Entrypoint)).Layout(gtx)
+					return material.Body1(th, i18n.Entrypoint.Value()).Layout(gtx)
 				}),
 				layout.Rigid(func(gtx C) D {
 					if err := func() error {
@@ -334,7 +330,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 							return nil
 						}
 						if _, err := net.ResolveUDPAddr("udp", addr); err != nil {
-							return fmt.Errorf(i18n.Get(i18n.ErrInvalidAddr))
+							return fmt.Errorf(i18n.ErrInvalidAddr.Value())
 						}
 						return nil
 					}(); err != nil {
@@ -343,7 +339,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 						p.entrypoint.ClearError()
 					}
 
-					return p.entrypoint.Layout(gtx, th, i18n.Get(i18n.Address))
+					return p.entrypoint.Layout(gtx, th, i18n.Address.Value())
 				}),
 				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 
@@ -355,7 +351,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 						return layout.Flex{
 							Spacing: layout.SpaceBetween,
 						}.Layout(gtx,
-							layout.Flexed(1, material.Body1(th, i18n.Get(i18n.Keepalive)).Layout),
+							layout.Flexed(1, material.Body1(th, i18n.Keepalive.Value()).Layout),
 							layout.Rigid(material.Switch(th, &p.keepalive, "keepalive").Layout),
 						)
 					})
@@ -369,7 +365,7 @@ func (p *udpPage) layout(gtx C, th *material.Theme) D {
 					if err := func() string {
 						for _, r := range p.ttl.Text() {
 							if !unicode.IsDigit(r) {
-								return i18n.Get(i18n.ErrDigitOnly)
+								return i18n.ErrDigitOnly.Value()
 							}
 						}
 						return ""
@@ -453,6 +449,7 @@ func (p *udpPage) onoff() {
 			tunnel.EndpointOption(opts.Endpoint),
 			tunnel.KeepaliveOption(opts.Keepalive),
 			tunnel.TTLOption(opts.TTL),
+			tunnel.CreatedAtOption(opts.CreatedAt),
 		)
 	} else {
 		ep.Close()

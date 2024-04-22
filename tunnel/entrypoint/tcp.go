@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-gost/core/chain"
 	"github.com/go-gost/core/handler"
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/service"
+	cfg "github.com/go-gost/gost.plus/config"
 	"github.com/go-gost/gost.plus/tunnel"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
@@ -20,6 +22,7 @@ import (
 	"github.com/go-gost/x/listener/tcp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
+	"github.com/go-gost/x/stats"
 	"github.com/google/uuid"
 )
 
@@ -29,6 +32,7 @@ type tcpEntryPoint struct {
 	config   *config.Config
 	forward  service.Service
 	favorite atomic.Bool
+	stats    cfg.ServiceStats
 
 	cclose chan struct{}
 
@@ -55,6 +59,9 @@ func NewTCPEntryPoint(opts ...tunnel.Option) EntryPoint {
 
 	if options.Name == "" {
 		options.Name = endpoint
+	}
+	if options.CreatedAt.IsZero() {
+		options.CreatedAt = time.Now()
 	}
 
 	s := &tcpEntryPoint{
@@ -152,10 +159,13 @@ func (s *tcpEntryPoint) Run() (err error) {
 			return
 		}
 
+		stats := &stats.Stats{}
+
 		cfg := s.config.Services[0]
 		ln := tcp.NewListener(
 			listener.AddrOption(cfg.Addr),
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "tcp"})),
+			listener.StatsOption(stats),
 		)
 		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
 			return
@@ -179,7 +189,10 @@ func (s *tcpEntryPoint) Run() (err error) {
 				hop.LoggerOption(log.WithFields(map[string]any{"kind": "hop"})),
 			))
 		}
-		s.forward = xservice.NewService(s.opts.Name, ln, h, xservice.LoggerOption(log))
+		s.forward = xservice.NewService(s.opts.Name, ln, h,
+			xservice.LoggerOption(log),
+			xservice.StatsOption(stats),
+		)
 	}
 
 	go func() {
@@ -194,6 +207,18 @@ func (s *tcpEntryPoint) Status() *xservice.Status {
 		return ss.Status()
 	}
 	return nil
+}
+
+func (s *tcpEntryPoint) Stats() cfg.ServiceStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.stats
+}
+
+func (s *tcpEntryPoint) SetStats(stats cfg.ServiceStats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats = stats
 }
 
 func (s *tcpEntryPoint) Close() error {

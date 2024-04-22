@@ -87,7 +87,7 @@ func (p *entrypointPage) Layout(gtx C) D {
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),
 					layout.Rigid(func(gtx C) D {
-						title := material.H6(th, i18n.Get(i18n.Entrypoint))
+						title := material.H6(th, i18n.Entrypoint.Value())
 						return title.Layout(gtx)
 					}),
 					layout.Rigid(layout.Spacer{Width: 8}.Layout),

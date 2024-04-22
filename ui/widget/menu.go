@@ -12,7 +12,7 @@ import (
 type Menu struct {
 	List     layout.List
 	Items    []MenuItem
-	Title    string
+	Title    i18n.Key
 	Selected func(index int)
 	btnAdd   widget.Clickable
 	ShowAdd  bool
@@ -20,79 +20,72 @@ type Menu struct {
 }
 
 func (p *Menu) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	var cl widget.Clickable
-	return cl.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		if gtx.Constraints.Max.X > gtx.Dp(800) {
-			gtx.Constraints.Max.X = gtx.Dp(800)
-		}
-		gtx.Constraints.Max.X = gtx.Constraints.Max.X * 2 / 3
-		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return layout.Inset{
-				Top:    16,
-				Bottom: 16,
+	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Inset{
+			Top:    16,
+			Bottom: 16,
+		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return component.SurfaceStyle{
+				Theme: th,
+				ShadowStyle: component.ShadowStyle{
+					CornerRadius: 28,
+				},
 			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return component.SurfaceStyle{
-					Theme: th,
-					ShadowStyle: component.ShadowStyle{
-						CornerRadius: 28,
-					},
+				return layout.Inset{
+					Top:    16,
+					Bottom: 16,
 				}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return layout.Inset{
-						Top:    16,
-						Bottom: 16,
-					}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return layout.Flex{
-							Axis: layout.Vertical,
-						}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return layout.Inset{
-									Top:    8,
-									Bottom: 8,
-									Left:   24,
-									Right:  24,
-								}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-									return layout.Flex{
-										Alignment: layout.Middle,
-									}.Layout(gtx,
-										layout.Flexed(1, material.H6(th, p.Title).Layout),
-										layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-											if !p.ShowAdd {
-												return layout.Dimensions{}
-											}
-											btn := material.IconButton(th, &p.btnAdd, icons.IconAdd, "Add")
-											btn.Background = th.Bg
-											btn.Color = th.Fg
-											btn.Inset = layout.UniformInset(0)
-											return btn.Layout(gtx)
-										}),
-									)
-								})
-							}),
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return layout.Inset{
-									Top:    8,
-									Bottom: 8,
-								}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-									return p.List.Layout(gtx, len(p.Items), func(gtx layout.Context, index int) layout.Dimensions {
-										if p.Items[index].state.Clicked(gtx) {
-											if p.Multiple {
-												p.Items[index].Selected = !p.Items[index].Selected
-											} else {
-												for i := range p.Items {
-													p.Items[i].Selected = false
-												}
-												p.Items[index].Selected = true
-											}
-											if p.Selected != nil {
-												p.Selected(index)
-											}
+					return layout.Flex{
+						Axis: layout.Vertical,
+					}.Layout(gtx,
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return layout.Inset{
+								Top:    8,
+								Bottom: 8,
+								Left:   24,
+								Right:  24,
+							}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								return layout.Flex{
+									Alignment: layout.Middle,
+								}.Layout(gtx,
+									layout.Flexed(1, material.H6(th, p.Title.Value()).Layout),
+									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										if !p.ShowAdd {
+											return layout.Dimensions{}
 										}
-										return p.Items[index].Layout(gtx, th)
-									})
+										btn := material.IconButton(th, &p.btnAdd, icons.IconAdd, "Add")
+										btn.Background = th.Bg
+										btn.Color = th.Fg
+										btn.Inset = layout.UniformInset(0)
+										return btn.Layout(gtx)
+									}),
+								)
+							})
+						}),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return layout.Inset{
+								Top:    8,
+								Bottom: 8,
+							}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								return p.List.Layout(gtx, len(p.Items), func(gtx layout.Context, index int) layout.Dimensions {
+									if p.Items[index].state.Clicked(gtx) {
+										if p.Multiple {
+											p.Items[index].Selected = !p.Items[index].Selected
+										} else {
+											for i := range p.Items {
+												p.Items[i].Selected = false
+											}
+											p.Items[index].Selected = true
+										}
+										if p.Selected != nil {
+											p.Selected(index)
+										}
+									}
+									return p.Items[index].Layout(gtx, th)
 								})
-							}),
-						)
-					})
+							})
+						}),
+					)
 				})
 			})
 		})

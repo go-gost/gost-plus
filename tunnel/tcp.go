@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-gost/core/chain"
 	"github.com/go-gost/core/handler"
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/service"
+	cfg "github.com/go-gost/gost.plus/config"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
 	"github.com/go-gost/x/handler/forward/remote"
@@ -19,6 +21,7 @@ import (
 	"github.com/go-gost/x/listener/rtcp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
+	"github.com/go-gost/x/stats"
 	"github.com/google/uuid"
 )
 
@@ -28,6 +31,7 @@ type tcpTunnel struct {
 	config   *config.Config
 	forward  service.Service
 	favorite atomic.Bool
+	stats    cfg.ServiceStats
 
 	cclose chan struct{}
 
@@ -54,6 +58,9 @@ func NewTCPTunnel(opts ...Option) Tunnel {
 
 	if options.Name == "" {
 		options.Name = endpoint
+	}
+	if options.CreatedAt.IsZero() {
+		options.CreatedAt = time.Now()
 	}
 
 	s := &tcpTunnel{
@@ -151,11 +158,14 @@ func (s *tcpTunnel) Run() (err error) {
 			return
 		}
 
+		stats := &stats.Stats{}
+
 		cfg := s.config.Services[0]
 		ln := rtcp.NewListener(
 			listener.AddrOption(cfg.Addr),
 			listener.ChainOption(ch),
 			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})),
+			listener.StatsOption(stats),
 		)
 		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
 			return
@@ -175,7 +185,10 @@ func (s *tcpTunnel) Run() (err error) {
 				hop.LoggerOption(log.WithFields(map[string]any{"kind": "hop"})),
 			))
 		}
-		s.forward = xservice.NewService(s.opts.Name, ln, h, xservice.LoggerOption(log))
+		s.forward = xservice.NewService(s.opts.Name, ln, h,
+			xservice.LoggerOption(log),
+			xservice.StatsOption(stats),
+		)
 	}
 
 	go func() {
@@ -190,6 +203,18 @@ func (s *tcpTunnel) Status() *xservice.Status {
 		return ss.Status()
 	}
 	return nil
+}
+
+func (s *tcpTunnel) Stats() cfg.ServiceStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.stats
+}
+
+func (s *tcpTunnel) SetStats(stats cfg.ServiceStats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats = stats
 }
 
 func (s *tcpTunnel) Close() error {

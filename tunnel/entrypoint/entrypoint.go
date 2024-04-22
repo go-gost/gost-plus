@@ -112,6 +112,8 @@ func LoadConfig() {
 			EnableTLS: cfg.EnableTLS,
 			Keepalive: cfg.Keepalive,
 			TTL:       cfg.TTL,
+			CreatedAt: cfg.CreatedAt,
+			Stats:     cfg.Stats,
 		})
 		if ep == nil {
 			continue
@@ -151,6 +153,8 @@ func SaveConfig() error {
 			EnableTLS: opts.EnableTLS,
 			Favorite:  ep.IsFavorite(),
 			Closed:    ep.IsClosed(),
+			CreatedAt: opts.CreatedAt,
+			Stats:     ep.Stats(),
 		})
 	}
 
@@ -163,7 +167,7 @@ func SaveConfig() error {
 	return nil
 }
 
-func createEntryPoint(st string, opts tunnel.Options) EntryPoint {
+func createEntryPoint(st string, opts tunnel.Options) (ep EntryPoint) {
 	options := []tunnel.Option{
 		tunnel.IDOption(opts.ID),
 		tunnel.NameOption(opts.Name),
@@ -172,13 +176,17 @@ func createEntryPoint(st string, opts tunnel.Options) EntryPoint {
 		tunnel.UsernameOption(opts.Username),
 		tunnel.PasswordOption(opts.Password),
 		tunnel.EnableTLSOption(opts.EnableTLS),
+		tunnel.CreatedAtOption(opts.CreatedAt),
 	}
 	switch st {
 	case TCPEntryPoint:
-		return NewTCPEntryPoint(options...)
+		ep = NewTCPEntryPoint(options...)
 	case UDPEntryPoint:
-		return NewUDPEntryPoint(options...)
+		ep = NewUDPEntryPoint(options...)
 	default:
 		return nil
 	}
+
+	ep.SetStats(opts.Stats)
+	return
 }

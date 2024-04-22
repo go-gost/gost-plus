@@ -51,7 +51,7 @@ var (
 			Material: material.Palette{
 				Fg:         color.NRGBA(colornames.White),
 				Bg:         color.NRGBA(colornames.Grey900),
-				ContrastBg: color.NRGBA(colornames.LightBlueA400),
+				ContrastBg: color.NRGBA(colornames.Green500),
 				ContrastFg: color.NRGBA(colornames.White),
 			},
 			ContentSurfaceBg:    color.NRGBA(colornames.Grey800),
