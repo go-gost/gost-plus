@@ -109,17 +109,16 @@ func (s *httpTunnel) init() error {
 	node := &config.ForwardNodeConfig{
 		Name: s.opts.Name,
 		Addr: s.opts.Endpoint,
+		HTTP: &config.HTTPNodeConfig{},
 	}
 	if s.opts.Username != "" {
-		node.Auth = &config.AuthConfig{
+		node.HTTP.Auth = &config.AuthConfig{
 			Username: s.opts.Username,
 			Password: s.opts.Password,
 		}
 	}
 	if s.opts.Hostname != "" {
-		node.HTTP = &config.HTTPNodeConfig{
-			Host: s.opts.Hostname,
-		}
+		node.HTTP.Host = s.opts.Hostname
 	}
 	if s.opts.EnableTLS {
 		node.TLS = &config.TLSNodeConfig{}
