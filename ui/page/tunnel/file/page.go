@@ -495,6 +495,10 @@ func (p *filePage) create() error {
 
 	if err := tun.Run(); err != nil {
 		tun.Close()
+		p.router.Notify(ui_widget.Message{
+			Type:    ui_widget.Error,
+			Content: err.Error(),
+		})
 		return err
 	}
 
@@ -528,6 +532,10 @@ func (p *filePage) update(opts ...tunnel.Option) tunnel.Tunnel {
 
 	if err := tun.Run(); err != nil {
 		tun.Close()
+		p.router.Notify(ui_widget.Message{
+			Type:    ui_widget.Error,
+			Content: err.Error(),
+		})
 		logger.Default().Error(err)
 	}
 

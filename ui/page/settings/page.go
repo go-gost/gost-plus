@@ -128,50 +128,64 @@ func (p *settingsPage) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *settingsPage) layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	return component.SurfaceStyle{
-		Theme: th,
-		ShadowStyle: component.ShadowStyle{
-			CornerRadius: 12,
-		},
-		Fill: theme.Current().ContentSurfaceBg,
-	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.UniformInset(16).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return layout.Flex{
+		Axis:      layout.Vertical,
+		Alignment: layout.Middle,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:      layout.Vertical,
 				Alignment: layout.Middle,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						gtx.Constraints.Max.X = gtx.Dp(60)
 						return icons.IconApp.Layout(gtx)
 					})
 				}),
-				layout.Rigid(layout.Spacer{Height: 8}.Layout),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					label := material.H6(th, "GOST+")
-					label.Font.Weight = font.Bold
-					return label.Layout(gtx)
-				}),
-				layout.Rigid(layout.Spacer{Height: 8}.Layout),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, version.Version).Layout(gtx)
-				}),
 				layout.Rigid(layout.Spacer{Height: 16}.Layout),
-
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					if p.lang.Clicked(gtx) {
-						p.showLangMenu(gtx)
-					}
-					return p.lang.Layout(gtx, th)
+					label := material.Body1(th, "GOST+")
+					label.Font.Weight = font.SemiBold
+					return layout.Center.Layout(gtx, label.Layout)
 				}),
+				layout.Rigid(layout.Spacer{Height: 8}.Layout),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					if p.theme.Clicked(gtx) {
-						p.showThemeMenu(gtx)
-					}
-					return p.theme.Layout(gtx, th)
+					return layout.Center.Layout(gtx, material.Body1(th, version.Version).Layout)
 				}),
 			)
-		})
-	})
+		}),
+		layout.Rigid(layout.Spacer{Height: 32}.Layout),
+
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return component.SurfaceStyle{
+				Theme: th,
+				ShadowStyle: component.ShadowStyle{
+					CornerRadius: 12,
+				},
+				Fill: theme.Current().ContentSurfaceBg,
+			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return layout.UniformInset(16).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return layout.Flex{
+						Axis: layout.Vertical,
+					}.Layout(gtx,
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							if p.lang.Clicked(gtx) {
+								p.showLangMenu(gtx)
+							}
+							return p.lang.Layout(gtx, th)
+						}),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							if p.theme.Clicked(gtx) {
+								p.showThemeMenu(gtx)
+							}
+							return p.theme.Layout(gtx, th)
+						}),
+					)
+				})
+			})
+		}),
+	)
 }
 
 func (p *settingsPage) showLangMenu(gtx layout.Context) {
@@ -263,6 +277,7 @@ func (p *settingsPage) showThemeMenu(gtx layout.Context) {
 		default:
 			theme.UseLight()
 		}
+		p.router.Emit(page.Event{ID: page.EventThemeChanged})
 	}
 
 	p.router.ShowModal(gtx, func(gtx page.C, th *material.Theme) page.D {

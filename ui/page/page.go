@@ -2,6 +2,7 @@ package page
 
 import (
 	"gioui.org/layout"
+	"gioui.org/widget/material"
 )
 
 type PagePath string
@@ -26,6 +27,10 @@ type PageOptions struct {
 }
 
 type PageOption func(opts *PageOptions)
+
+type C = layout.Context
+type D = layout.Dimensions
+type T = material.Theme
 
 func WithPageID(id string) PageOption {
 	return func(opts *PageOptions) {

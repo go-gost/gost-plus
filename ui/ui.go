@@ -1,11 +1,12 @@
 package ui
 
 import (
-	"gioui.org/font/gofont"
+	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/text"
 	"gioui.org/widget/material"
 	"github.com/go-gost/gost.plus/config"
+	"github.com/go-gost/gost.plus/ui/fonts"
 	"github.com/go-gost/gost.plus/ui/i18n"
 	"github.com/go-gost/gost.plus/ui/page"
 	"github.com/go-gost/gost.plus/ui/page/entrypoint"
@@ -25,6 +26,7 @@ type C = layout.Context
 type D = layout.Dimensions
 
 type UI struct {
+	w      *app.Window
 	router *page.Router
 }
 
@@ -40,10 +42,18 @@ func NewUI() *UI {
 	}
 
 	th := material.NewTheme()
-	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+	// th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+	th.Shaper = text.NewShaper(text.WithCollection(fonts.Collection()))
 	th.Palette = theme.Current().Material
 
-	router := page.NewRouter(th)
+	w := &app.Window{}
+	w.Option(
+		app.Title("GOST"),
+		app.MinSize(800, 600),
+		app.StatusColor(th.Bg),
+	)
+
+	router := page.NewRouter(w, th)
 	router.Register(page.PageHome, home.NewPage(router))
 	router.Register(page.PageTunnel, tunnel.NewPage(router))
 	router.Register(page.PageTunnelFile, file.NewPage(router))
@@ -60,10 +70,19 @@ func NewUI() *UI {
 	})
 
 	return &UI{
+		w:      w,
 		router: router,
 	}
 }
 
 func (ui *UI) Layout(gtx C) D {
 	return ui.router.Layout(gtx)
+}
+
+func (ui *UI) Window() *app.Window {
+	return ui.w
+}
+
+func (ui *UI) Router() *page.Router {
+	return ui.router
 }

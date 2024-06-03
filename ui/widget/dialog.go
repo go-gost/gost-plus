@@ -91,14 +91,14 @@ func (p *Dialog) Layout(gtx layout.Context, th *material.Theme) layout.Dimension
 
 									return material.ButtonLayoutStyle{
 										Background:   th.Bg,
-										CornerRadius: 20,
+										CornerRadius: 18,
 										Button:       &p.btnCancel,
 									}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 										return layout.Inset{
 											Top:    8,
 											Bottom: 8,
-											Left:   24,
-											Right:  24,
+											Left:   20,
+											Right:  20,
 										}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 											label := material.Body1(th, i18n.Cancel.Value())
 											label.Color = th.Fg
@@ -117,14 +117,14 @@ func (p *Dialog) Layout(gtx layout.Context, th *material.Theme) layout.Dimension
 
 									return material.ButtonLayoutStyle{
 										Background:   th.Bg,
-										CornerRadius: 20,
+										CornerRadius: 18,
 										Button:       &p.btnOK,
 									}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 										return layout.Inset{
 											Top:    8,
 											Bottom: 8,
-											Left:   24,
-											Right:  24,
+											Left:   20,
+											Right:  20,
 										}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 											label := material.Body1(th, i18n.OK.Value())
 											label.Color = th.Fg

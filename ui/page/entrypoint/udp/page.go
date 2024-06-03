@@ -399,6 +399,10 @@ func (p *udpPage) create() error {
 
 	if err := ep.Run(); err != nil {
 		ep.Close()
+		p.router.Notify(ui_widget.Message{
+			Type:    ui_widget.Error,
+			Content: err.Error(),
+		})
 		return err
 	}
 
@@ -429,6 +433,10 @@ func (p *udpPage) update(opts ...tunnel.Option) tunnel.Tunnel {
 
 	if err := ep.Run(); err != nil {
 		ep.Close()
+		p.router.Notify(ui_widget.Message{
+			Type:    ui_widget.Error,
+			Content: err.Error(),
+		})
 		logger.Default().Error(err)
 	}
 

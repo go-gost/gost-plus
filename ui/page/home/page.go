@@ -4,7 +4,6 @@ import (
 	"image/color"
 	"sync/atomic"
 
-	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -90,14 +89,7 @@ func (p *homePage) Layout(gtx C) D {
 								gtx.Constraints.Max.X = gtx.Dp(50)
 								return icons.IconApp.Layout(gtx)
 							}),
-							layout.Rigid(layout.Spacer{Width: 8}.Layout),
-							layout.Flexed(1, func(gtx C) D {
-								label := material.H6(th, "GOST+")
-								label.Font.Weight = font.SemiBold
-								return label.Layout(gtx)
-							}),
-							layout.Rigid(layout.Spacer{Width: 8}.Layout),
-
+							layout.Flexed(1, layout.Spacer{Width: 8}.Layout),
 							layout.Rigid(func(gtx C) D {
 								if p.btnFavorite.Clicked(gtx) {
 									p.favorite.Store(!p.favorite.Load())

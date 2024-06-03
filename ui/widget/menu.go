@@ -105,10 +105,10 @@ func (p *MenuItem) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 		Button:     &p.state,
 	}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.Inset{
-			Top:    8,
-			Bottom: 8,
-			Left:   16,
-			Right:  16,
+			Top:    12,
+			Bottom: 12,
+			Left:   24,
+			Right:  24,
 		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Spacing:   layout.SpaceBetween,
