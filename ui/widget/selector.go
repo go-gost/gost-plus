@@ -12,7 +12,8 @@ import (
 )
 
 type SelectorItem struct {
-	Name  i18n.Key
+	Name  string
+	Key   i18n.Key
 	Value string
 }
 
@@ -35,22 +36,25 @@ func (p *Selector) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 				layout.Rigid(layout.Spacer{Width: 8}.Layout),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return layout.E.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						var values []string
+						var names []string
 						for _, item := range p.items {
 							if item.Value == "" {
 								continue
 							}
 
-							value := item.Name.Value()
-							if value == "" {
-								value = item.Value
+							name := item.Name
+							if name == "" {
+								name = item.Key.Value()
 							}
-							values = append(values, value)
+							if name == "" {
+								name = item.Value
+							}
+							names = append(names, name)
 						}
 
 						return outlay.FlowWrap{
 							Alignment: layout.Middle,
-						}.Layout(gtx, len(values), func(gtx layout.Context, i int) layout.Dimensions {
+						}.Layout(gtx, len(names), func(gtx layout.Context, i int) layout.Dimensions {
 							return layout.UniformInset(4).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								return component.SurfaceStyle{
 									Theme:       th,
@@ -62,7 +66,7 @@ func (p *Selector) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 										Bottom: 4,
 										Left:   10,
 										Right:  10,
-									}.Layout(gtx, material.Body2(th, values[i]).Layout)
+									}.Layout(gtx, material.Body2(th, names[i]).Layout)
 								})
 							})
 						})
@@ -90,26 +94,37 @@ func (p *Selector) Clicked(gtx layout.Context) bool {
 
 func (p *Selector) Select(items ...SelectorItem) {
 	for _, item := range items {
-		if item.Name == "" {
+		if item.Name == "" && item.Value == "" {
 			continue
 		}
 		p.items = append(p.items, item)
 	}
 }
 
-func (p *Selector) Unselect(name string) {
-	for i := range p.items {
-		if p.items[i].Name.Value() == name {
-			p.items = append(p.items[:i], p.items[i+1:]...)
-			return
+func (p *Selector) Any(items ...SelectorItem) bool {
+	for _, item := range items {
+		if p.contains(item) {
+			return true
 		}
 	}
+	return false
 }
 
-func (p *Selector) Any(names ...string) bool {
-	for _, name := range names {
-		if p.contains(name) {
+func (p *Selector) contains(item SelectorItem) bool {
+	for i := range p.items {
+		if p.items[i] == item {
 			return true
+		}
+	}
+	return false
+}
+
+func (p *Selector) AnyValue(values ...string) bool {
+	for _, value := range values {
+		for i := range p.items {
+			if p.items[i].Value == value {
+				return true
+			}
 		}
 	}
 	return false
@@ -126,17 +141,18 @@ func (p *Selector) Items() []SelectorItem {
 	return p.items
 }
 
-func (p *Selector) contains(name string) bool {
-	if name == "" && len(p.items) == 0 {
-		return true
+func (p *Selector) Value() string {
+	if len(p.items) == 0 {
+		return ""
 	}
+	return p.items[0].Value
+}
 
+func (p *Selector) Values() (values []string) {
 	for i := range p.items {
-		if p.items[i].Name.Value() == name {
-			return true
-		}
+		values = append(values, p.items[i].Value)
 	}
-	return false
+	return
 }
 
 func (p *Selector) Clear() {

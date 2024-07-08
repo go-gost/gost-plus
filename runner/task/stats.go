@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
+	stats_pkg "github.com/go-gost/core/observer/stats"
 	"github.com/go-gost/gost.plus/config"
 	"github.com/go-gost/gost.plus/runner"
 	"github.com/go-gost/gost.plus/tunnel"
 	"github.com/go-gost/gost.plus/tunnel/entrypoint"
-	stats_pkg "github.com/go-gost/x/stats"
 )
 
 type updateStatsTask struct{}

@@ -18,6 +18,7 @@ import (
 
 const (
 	configFile = "config.yml"
+	logFile    = "gost-plus.log"
 )
 
 var (
@@ -58,10 +59,20 @@ func Init() {
 func initLog() {
 	cfg := Get().Log
 	if cfg == nil {
+		logDir := filepath.Join(configDir, "logs")
+		os.MkdirAll(logDir, 0755)
+		slog.Info(fmt.Sprintf("log dir: %s", logDir))
+
 		cfg = &xconfig.LogConfig{
-			Output: "stdout",
+			Output: filepath.Join(logDir, logFile),
 			Level:  string(logger.InfoLevel),
 			Format: string(logger.JSONFormat),
+			Rotation: &xconfig.LogRotationConfig{
+				MaxSize:    10,
+				MaxAge:     7,
+				MaxBackups: 10,
+				LocalTime:  true,
+			},
 		}
 	}
 

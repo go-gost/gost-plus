@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	Light string = "light"
-	Dark  string = "dark"
+	System string = "system"
+	Light  string = "light"
+	Dark   string = "dark"
 )
 
 type Palette struct {
@@ -24,11 +25,13 @@ type Palette struct {
 }
 
 type Theme struct {
+	Name string
 	Palette
 }
 
 var (
 	light = Theme{
+		Name: Light,
 		Palette: Palette{
 			Material: material.Palette{
 				Fg: color.NRGBA(colornames.Black),
@@ -51,6 +54,7 @@ var (
 	}
 
 	dark = Theme{
+		Name: Dark,
 		Palette: Palette{
 			Material: material.Palette{
 				Fg:         color.NRGBA(colornames.White),

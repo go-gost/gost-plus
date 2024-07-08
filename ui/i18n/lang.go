@@ -72,11 +72,6 @@ const (
 	UDPTunnelDesc      Key = "udpTunnelDesc"
 	TCPEntrypointDesc  Key = "tcpEntrypointDesc"
 	UDPEntrypointDesc  Key = "udpEntrypointDesc"
-	Settings           Key = "settings"
-	Language           Key = "language"
-	Theme              Key = "theme"
-	Light              Key = "light"
-	Dark               Key = "dark"
 	OK                 Key = "ok"
 	Cancel             Key = "cancel"
 	DeleteTunnel       Key = "deleteTunnel"
@@ -86,8 +81,14 @@ const (
 	ErrDigitOnly       Key = "errDigitOnly"
 	ErrDirectory       Key = "errDir"
 
-	English Key = "english"
-	Chinese Key = "chinese"
+	Settings    Key = "settings"
+	Language    Key = "language"
+	English     Key = "english"
+	Chinese     Key = "chinese"
+	Theme       Key = "theme"
+	ThemeLight  Key = "themeLight"
+	ThemeDark   Key = "themeDark"
+	ThemeSystem Key = "themeSystem"
 )
 
 type Key string

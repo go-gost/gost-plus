@@ -14,9 +14,11 @@ import (
 	"github.com/go-gost/core/handler"
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
+	"github.com/go-gost/core/observer/stats"
 	"github.com/go-gost/core/service"
 	cfg "github.com/go-gost/gost.plus/config"
 	xauth "github.com/go-gost/x/auth"
+	xchain "github.com/go-gost/x/chain"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
 	"github.com/go-gost/x/handler/file"
@@ -26,7 +28,6 @@ import (
 	"github.com/go-gost/x/listener/tcp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
-	"github.com/go-gost/x/stats"
 	"github.com/google/uuid"
 )
 
@@ -207,19 +208,22 @@ func (s *fileTunnel) Run() (err error) {
 			pStats.Add(stats.KindTotalErrs, int64(s.stats.TotalErrs))
 		}
 
+		listenerLogger := log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})
 		cfg := s.config.Services[1]
 		ln := rtcp.NewListener(
 			listener.AddrOption(cfg.Addr),
-			listener.ChainOption(ch),
-			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})),
+			listener.RouterOption(xchain.NewRouter(chain.ChainRouterOption(ch), chain.LoggerRouterOption(listenerLogger))),
+			listener.LoggerOption(listenerLogger),
 			listener.StatsOption(pStats),
 		)
 		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
 			return
 		}
 
+		handlerLogger := log.WithFields(map[string]any{"kind": "handler", "handler": "rtcp"})
 		h := remote.NewHandler(
-			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "rtcp"})),
+			handler.RouterOption(xchain.NewRouter(chain.LoggerRouterOption(handlerLogger))),
+			handler.LoggerOption(handlerLogger),
 		)
 		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
 			return

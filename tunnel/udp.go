@@ -12,8 +12,10 @@ import (
 	"github.com/go-gost/core/handler"
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
+	"github.com/go-gost/core/observer/stats"
 	"github.com/go-gost/core/service"
 	cfg "github.com/go-gost/gost.plus/config"
+	xchain "github.com/go-gost/x/chain"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
 	"github.com/go-gost/x/handler/forward/remote"
@@ -21,7 +23,6 @@ import (
 	"github.com/go-gost/x/listener/rudp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
-	"github.com/go-gost/x/stats"
 	"github.com/google/uuid"
 )
 
@@ -158,21 +159,23 @@ func (s *udpTunnel) Run() (err error) {
 			return
 		}
 
+		listenerLogger := log.WithFields(map[string]any{"kind": "listener", "listener": "rudp"})
 		stats := &stats.Stats{}
-
 		cfg := s.config.Services[0]
 		ln := rudp.NewListener(
 			listener.AddrOption(cfg.Addr),
-			listener.ChainOption(ch),
-			listener.LoggerOption(log.WithFields(map[string]any{"kind": "listener", "listener": "rudp"})),
+			listener.RouterOption(xchain.NewRouter(chain.ChainRouterOption(ch), chain.LoggerRouterOption(listenerLogger))),
+			listener.LoggerOption(listenerLogger),
 			listener.StatsOption(stats),
 		)
 		if err = ln.Init(mdx.NewMetadata(cfg.Listener.Metadata)); err != nil {
 			return
 		}
 
+		handlerLogger := log.WithFields(map[string]any{"kind": "handler", "handler": "rudp"})
 		h := remote.NewHandler(
-			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "rudp"})),
+			handler.RouterOption(xchain.NewRouter(chain.LoggerRouterOption(handlerLogger))),
+			handler.LoggerOption(handlerLogger),
 		)
 		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
 			return

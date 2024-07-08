@@ -29,11 +29,6 @@ type settingsPage struct {
 func NewPage(r *page.Router) page.Page {
 	return &settingsPage{
 		router: r,
-		menu: ui_widget.Menu{
-			List: layout.List{
-				Axis: layout.Vertical,
-			},
-		},
 		list: widget.List{
 			List: layout.List{
 				Axis: layout.Vertical,
@@ -52,26 +47,29 @@ func (p *settingsPage) Init(opts ...page.PageOption) {
 	if settings.Lang == "" {
 		settings.Lang = i18n.Current().Value
 	}
-	if settings.Theme == "" {
-		settings.Theme = theme.Light
-	}
 
 	p.lang.Clear()
 	p.lang.Select(ui_widget.SelectorItem{
-		Name:  i18n.Current().Name,
+		Key:   i18n.Current().Name,
 		Value: i18n.Current().Value,
 	})
 
 	p.theme.Clear()
-	if settings.Theme == theme.Light {
+	switch settings.Theme {
+	case theme.Light:
 		p.theme.Select(ui_widget.SelectorItem{
-			Name:  i18n.Light,
+			Key:   i18n.ThemeLight,
 			Value: settings.Theme,
 		})
-	} else {
+	case theme.Dark:
 		p.theme.Select(ui_widget.SelectorItem{
-			Name:  i18n.Dark,
+			Key:   i18n.ThemeDark,
 			Value: settings.Theme,
+		})
+	default:
+		p.theme.Select(ui_widget.SelectorItem{
+			Key:   i18n.ThemeSystem,
+			Value: theme.System,
 		})
 	}
 }
@@ -139,7 +137,7 @@ func (p *settingsPage) layout(gtx layout.Context, th *material.Theme) layout.Dim
 			}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						gtx.Constraints.Max.X = gtx.Dp(60)
+						gtx.Constraints.Max.X = gtx.Dp(80)
 						return icons.IconApp.Layout(gtx)
 					})
 				}),
@@ -189,34 +187,44 @@ func (p *settingsPage) layout(gtx layout.Context, th *material.Theme) layout.Dim
 }
 
 func (p *settingsPage) showLangMenu(gtx layout.Context) {
-	var items []ui_widget.MenuItem
+	var options []ui_widget.MenuOption
 	for _, lang := range i18n.Langs() {
-		items = append(items, ui_widget.MenuItem{
+		options = append(options, ui_widget.MenuOption{
 			Key:   lang.Name,
 			Value: lang.Value,
 		})
 	}
 
 	var found bool
-	for i := range items {
-		if found = p.lang.Any(items[i].Key.Value()); found {
-			items[i].Selected = found
+	for i := range options {
+		if found = p.lang.AnyValue(options[i].Value); found {
+			options[i].Selected = found
 			break
 		}
 	}
 	if !found {
-		items[0].Selected = true
+		options[0].Selected = true
 	}
 
 	p.menu.Title = i18n.Language
-	p.menu.Items = items
-	p.menu.Selected = func(index int) {
-		p.lang.Clear()
-		p.lang.Select(ui_widget.SelectorItem{
-			Name:  p.menu.Items[index].Key,
-			Value: p.menu.Items[index].Value,
-		})
+	p.menu.Options = options
+	p.menu.OnClick = func(ok bool) {
 		p.router.HideModal(gtx)
+		if !ok {
+			return
+		}
+
+		p.lang.Clear()
+
+		for index := range p.menu.Options {
+			if p.menu.Options[index].Selected {
+				p.lang.Select(ui_widget.SelectorItem{
+					Key:   p.menu.Options[index].Key,
+					Value: p.menu.Options[index].Value,
+				})
+				break
+			}
+		}
 
 		cfg := config.Get()
 		if cfg.Settings == nil {
@@ -236,31 +244,42 @@ func (p *settingsPage) showLangMenu(gtx layout.Context) {
 }
 
 func (p *settingsPage) showThemeMenu(gtx layout.Context) {
-	items := []ui_widget.MenuItem{
-		{Key: i18n.Light, Value: theme.Light},
-		{Key: i18n.Dark, Value: theme.Dark},
+	options := []ui_widget.MenuOption{
+		{Key: i18n.ThemeSystem, Value: theme.System},
+		{Key: i18n.ThemeLight, Value: theme.Light},
+		{Key: i18n.ThemeDark, Value: theme.Dark},
 	}
 
 	var found bool
-	for i := range items {
-		if found = p.theme.Any(items[i].Key.Value()); found {
-			items[i].Selected = found
+	for i := range options {
+		if found = p.theme.AnyValue(options[i].Value); found {
+			options[i].Selected = found
 			break
 		}
 	}
 	if !found {
-		items[0].Selected = true
+		options[0].Selected = true
 	}
 
 	p.menu.Title = i18n.Theme
-	p.menu.Items = items
-	p.menu.Selected = func(index int) {
-		p.theme.Clear()
-		p.theme.Select(ui_widget.SelectorItem{
-			Name:  p.menu.Items[index].Key,
-			Value: p.menu.Items[index].Value,
-		})
+	p.menu.Options = options
+	p.menu.OnClick = func(ok bool) {
 		p.router.HideModal(gtx)
+		if !ok {
+			return
+		}
+
+		p.theme.Clear()
+
+		for index := range p.menu.Options {
+			if p.menu.Options[index].Selected {
+				p.theme.Select(ui_widget.SelectorItem{
+					Key:   p.menu.Options[index].Key,
+					Value: p.menu.Options[index].Value,
+				})
+				break
+			}
+		}
 
 		cfg := config.Get()
 		if cfg.Settings == nil {

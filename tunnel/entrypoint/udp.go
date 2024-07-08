@@ -12,9 +12,11 @@ import (
 	"github.com/go-gost/core/handler"
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
+	"github.com/go-gost/core/observer/stats"
 	"github.com/go-gost/core/service"
 	cfg "github.com/go-gost/gost.plus/config"
 	"github.com/go-gost/gost.plus/tunnel"
+	xchain "github.com/go-gost/x/chain"
 	"github.com/go-gost/x/config"
 	chain_parser "github.com/go-gost/x/config/parsing/chain"
 	"github.com/go-gost/x/handler/forward/local"
@@ -22,7 +24,6 @@ import (
 	"github.com/go-gost/x/listener/udp"
 	mdx "github.com/go-gost/x/metadata"
 	xservice "github.com/go-gost/x/service"
-	"github.com/go-gost/x/stats"
 	"github.com/google/uuid"
 )
 
@@ -175,12 +176,13 @@ func (s *udpEntryPoint) Run() (err error) {
 			return
 		}
 
+		handlerLogger := log.WithFields(map[string]any{"kind": "handler", "handler": "udp"})
 		h := local.NewHandler(
-			handler.RouterOption(chain.NewRouter(
+			handler.RouterOption(xchain.NewRouter(
 				chain.ChainRouterOption(ch),
-				chain.LoggerRouterOption(log),
+				chain.LoggerRouterOption(handlerLogger),
 			)),
-			handler.LoggerOption(log.WithFields(map[string]any{"kind": "handler", "handler": "udp"})),
+			handler.LoggerOption(handlerLogger),
 		)
 		if err = h.Init(mdx.NewMetadata(cfg.Handler.Metadata)); err != nil {
 			return

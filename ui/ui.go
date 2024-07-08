@@ -5,6 +5,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/text"
 	"gioui.org/widget/material"
+	gio_theme "gioui.org/x/pref/theme"
 	"github.com/go-gost/gost.plus/config"
 	"github.com/go-gost/gost.plus/ui/fonts"
 	"github.com/go-gost/gost.plus/ui/i18n"
@@ -76,6 +77,19 @@ func NewUI() *UI {
 }
 
 func (ui *UI) Layout(gtx C) D {
+	if settings := config.Get().Settings; settings != nil {
+		if settings.Theme != theme.Dark && settings.Theme != theme.Light {
+			if dark, _ := gio_theme.IsDarkMode(); dark {
+				if theme.Current().Name == theme.Light {
+					theme.UseDark()
+				}
+			} else {
+				if theme.Current().Name == theme.Dark {
+					theme.UseLight()
+				}
+			}
+		}
+	}
 	return ui.router.Layout(gtx)
 }
 
