@@ -127,6 +127,10 @@ func (p *filePage) Init(opts ...page.PageOption) {
 	}
 }
 
+func (p *filePage) Destroy() {
+
+}
+
 func (p *filePage) Layout(gtx C) D {
 	if p.btnBack.Clicked(gtx) {
 		p.router.Back()

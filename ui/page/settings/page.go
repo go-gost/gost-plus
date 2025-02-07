@@ -74,6 +74,10 @@ func (p *settingsPage) Init(opts ...page.PageOption) {
 	}
 }
 
+func (p *settingsPage) Destroy() {
+
+}
+
 func (p *settingsPage) Layout(gtx layout.Context) layout.Dimensions {
 	if p.btnBack.Clicked(gtx) {
 		p.router.Back()

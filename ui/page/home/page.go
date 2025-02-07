@@ -58,6 +58,10 @@ func (p *homePage) Init(opts ...page.PageOption) {
 	)
 }
 
+func (p *homePage) Destroy() {
+
+}
+
 func (p *homePage) Layout(gtx C) D {
 	if p.btnAdd.Clicked(gtx) {
 		p.router.Goto(page.Route{Path: p.pages[p.nav.Current()].path})

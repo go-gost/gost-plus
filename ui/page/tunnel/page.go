@@ -67,6 +67,10 @@ func NewPage(r *page.Router) page.Page {
 
 func (p *tunnelPage) Init(opts ...page.PageOption) {}
 
+func (p *tunnelPage) Destroy() {
+
+}
+
 func (p *tunnelPage) Layout(gtx C) D {
 	if p.btnBack.Clicked(gtx) {
 		p.router.Back()

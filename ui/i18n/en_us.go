@@ -39,4 +39,6 @@ var en_US = map[Key]string{
 	ThemeLight:  "Light",
 	ThemeDark:   "Dark",
 	ThemeSystem: "System",
+
+	Inspector: "Traffic Inspector",
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/go-gost/x/listener/rtcp"
 	"github.com/go-gost/x/listener/tcp"
 	mdx "github.com/go-gost/x/metadata"
+	xstats "github.com/go-gost/x/observer/stats"
 	xservice "github.com/go-gost/x/service"
 	"github.com/google/uuid"
 )
@@ -199,7 +200,7 @@ func (s *fileTunnel) Run() (err error) {
 			return
 		}
 
-		pStats := &stats.Stats{}
+		pStats := xstats.NewStats(false)
 		{
 			pStats.Add(stats.KindCurrentConns, int64(s.stats.CurrentConns))
 			pStats.Add(stats.KindInputBytes, int64(s.stats.InputBytes))

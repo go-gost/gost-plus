@@ -120,6 +120,10 @@ func (p *udpPage) Init(opts ...page.PageOption) {
 	}
 }
 
+func (p *udpPage) Destroy() {
+
+}
+
 func (p *udpPage) Layout(gtx C) D {
 	if p.btnBack.Clicked(gtx) {
 		p.router.Back()

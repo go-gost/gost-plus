@@ -98,8 +98,14 @@ func Set(c *Config) {
 }
 
 type Settings struct {
-	Lang  string
-	Theme string
+	// Server address.
+	// default value is tunnel.gost.plus
+	Server string
+	// Public entrypoint address.
+	// default value is gost.plus
+	Entrypoint string
+	Lang       string
+	Theme      string
 }
 
 type Tunnel struct {

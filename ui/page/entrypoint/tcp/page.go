@@ -102,6 +102,10 @@ func (p *tcpPage) Init(opts ...page.PageOption) {
 	}
 }
 
+func (p *tcpPage) Destroy() {
+
+}
+
 func (p *tcpPage) Layout(gtx C) D {
 	if p.btnBack.Clicked(gtx) {
 		p.router.Back()

@@ -20,6 +20,8 @@ const (
 	PageEntrypoint    PagePath = "/entrypoint"
 	PageEntrypointTCP PagePath = "/entrypoint/tcp"
 	PageEntrypointUDP PagePath = "/entrypoint/udp"
+
+	PageInspector PagePath = "/inspector"
 )
 
 type PageOptions struct {
@@ -41,4 +43,5 @@ func WithPageID(id string) PageOption {
 type Page interface {
 	Init(opts ...PageOption)
 	Layout(gtx layout.Context) layout.Dimensions
+	Destroy()
 }

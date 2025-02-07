@@ -64,6 +64,8 @@ type httpPage struct {
 	edit bool
 
 	delDialog ui_widget.Dialog
+
+	btnInspector widget.Clickable
 }
 
 func NewPage(r *page.Router) page.Page {
@@ -144,6 +146,10 @@ func (p *httpPage) Init(opts ...page.PageOption) {
 		}
 		p.enableTLS.Value = sopts.EnableTLS
 	}
+}
+
+func (p *httpPage) Destroy() {
+
 }
 
 func (p *httpPage) Layout(gtx C) D {
@@ -297,6 +303,13 @@ func (p *httpPage) Layout(gtx C) D {
 }
 
 func (p *httpPage) layout(gtx C, th *material.Theme) D {
+	if p.btnInspector.Clicked(gtx) {
+		p.router.Goto(page.Route{
+			Path: page.PageInspector,
+			ID:   p.id,
+		})
+	}
+
 	src := gtx.Source
 
 	if !p.edit {
@@ -316,6 +329,32 @@ func (p *httpPage) layout(gtx C, th *material.Theme) D {
 			return layout.Flex{
 				Axis: layout.Vertical,
 			}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					if p.id == "" {
+						return layout.Dimensions{}
+					}
+
+					gtx.Source = src
+					return layout.Flex{
+						Alignment: layout.Middle,
+					}.Layout(gtx,
+						layout.Flexed(1, layout.Spacer{Width: 4}.Layout),
+						layout.Rigid(func(gtx page.C) page.D {
+							if p.id == "" {
+								return page.D{}
+							}
+
+							btn := material.IconButton(th, &p.btnInspector, icons.IconExplore, "Inspector")
+							btn.Color = th.Fg
+							btn.Background = theme.Current().ContentSurfaceBg
+							return btn.Layout(gtx)
+						}),
+					)
+				}),
+
+				layout.Rigid(layout.Spacer{Height: 8}.Layout),
+
+				// tunnel ID
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if tun == nil {
 						return layout.Dimensions{}
@@ -356,6 +395,7 @@ func (p *httpPage) layout(gtx C, th *material.Theme) D {
 					})
 				}),
 
+				// entrypoint
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if tun == nil {
 						return layout.Dimensions{}

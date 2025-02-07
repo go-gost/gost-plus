@@ -39,4 +39,6 @@ var zh_CN = map[Key]string{
 	ThemeLight:  "浅色",
 	ThemeDark:   "深色",
 	ThemeSystem: "系统",
+
+	Inspector: "流量观察",
 }

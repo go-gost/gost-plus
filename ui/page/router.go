@@ -74,9 +74,12 @@ func (r *Router) Goto(route Route) {
 }
 
 func (r *Router) Back() {
-	r.stack.Pop()
-	route := r.stack.Peek()
+	route := r.stack.Pop()
+	if page := r.pages[route.Path]; page != nil {
+		page.Destroy()
+	}
 
+	route = r.stack.Peek()
 	page := r.pages[route.Path]
 	if page == nil {
 		return

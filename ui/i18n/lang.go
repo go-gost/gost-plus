@@ -89,6 +89,8 @@ const (
 	ThemeLight  Key = "themeLight"
 	ThemeDark   Key = "themeDark"
 	ThemeSystem Key = "themeSystem"
+
+	Inspector Key = "inspector"
 )
 
 type Key string

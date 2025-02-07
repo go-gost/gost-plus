@@ -12,7 +12,6 @@ import (
 	"github.com/go-gost/core/handler"
 	"github.com/go-gost/core/listener"
 	"github.com/go-gost/core/logger"
-	"github.com/go-gost/core/observer/stats"
 	"github.com/go-gost/core/service"
 	cfg "github.com/go-gost/gost.plus/config"
 	xchain "github.com/go-gost/x/chain"
@@ -22,6 +21,7 @@ import (
 	"github.com/go-gost/x/hop"
 	"github.com/go-gost/x/listener/rtcp"
 	mdx "github.com/go-gost/x/metadata"
+	xstats "github.com/go-gost/x/observer/stats"
 	xservice "github.com/go-gost/x/service"
 	"github.com/google/uuid"
 )
@@ -160,7 +160,7 @@ func (s *tcpTunnel) Run() (err error) {
 		}
 
 		listenerLogger := log.WithFields(map[string]any{"kind": "listener", "listener": "rtcp"})
-		stats := &stats.Stats{}
+		stats := xstats.NewStats(false)
 		cfg := s.config.Services[0]
 		ln := rtcp.NewListener(
 			listener.AddrOption(cfg.Addr),

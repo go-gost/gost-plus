@@ -58,6 +58,10 @@ func NewPage(r *page.Router) page.Page {
 
 func (p *entrypointPage) Init(opts ...page.PageOption) {}
 
+func (p *entrypointPage) Destroy() {
+
+}
+
 func (p *entrypointPage) Layout(gtx C) D {
 	if p.btnBack.Clicked(gtx) {
 		p.router.Back()
